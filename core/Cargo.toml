@@ -1,0 +1,15 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+data_structures = { path = "../data_structures" }
+url = "2.4.1"
+tools = { path = "../tools" }
+downloader = { path = "../downloader" }
+tokio.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
