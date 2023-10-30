@@ -33,54 +33,95 @@ async fn start_crawl_postpages(
     settings: &Settings,
     css_rules: &tools::Value,
     client: &Client,
-) -> Vec<metadata::BasePosts> {
+) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     let base_url = Url::parse(&base_postpage_url).unwrap(); // TODO 异常处理
-    let target_theme = "butterfly";
     let css_rules = css_rules.clone();
     let mut joinset = JoinSet::new();
+
     if css_rules["post_page_rules"].is_mapping() {
-        for rule in css_rules
+        let css_rules = css_rules
             .get("post_page_rules")
             .unwrap()
             .as_mapping()
-            .unwrap()
-        {
-            let client = client.clone();
-            let theme_rule = rule.1.clone();
-            let base_postpage_url = base_postpage_url.clone();
-            joinset.spawn(async move {
-                let download_postpage_res =
-                    match downloader::crawl_post_page(&base_postpage_url, &theme_rule, &client)
-                        .await
+            .unwrap();
+        let css_rules = css_rules.clone();
+        let client_ = client.clone();
+        joinset.spawn(async move {
+            // 获取当前时间
+            let download_postpage_res =
+                match downloader::crawl_post_page(&base_postpage_url, &css_rules, &client_).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        println!("{}", e);
+                        HashMap::new()
+                    }
+                }; // TODO 异常处理
+            let mut length = 0;
+            // 字段缺失检查
+            if download_postpage_res.len() != 4 {
+                if download_postpage_res.contains_key("title")
+                    && download_postpage_res.contains_key("link")
+                {
+                    if download_postpage_res.get("title").unwrap().len()
+                        != download_postpage_res.get("link").unwrap().len()
                     {
-                        Ok(v) => v,
-                        Err(e) => {
-                            println!("{}", e);
-                            HashMap::new()
-                        }
-                    }; // TODO 异常处理
-                let length = check_length(&download_postpage_res);
-                let mut format_base_posts = vec![];
-                for i in 0..length {
-                    let title = download_postpage_res.get("title").unwrap()[i]
-                        .trim()
-                        .to_string();
-                    // TODO 时间格式校验
-                    let created = download_postpage_res.get("created").unwrap()[i]
-                        .trim()
-                        .to_string();
-                    let updated = download_postpage_res.get("updated").unwrap()[i]
-                        .trim()
-                        .to_string();
-                    let link = download_postpage_res.get("link").unwrap()[i]
-                        .trim()
-                        .to_string();
-                    let base_post = metadata::BasePosts::new(title, created, updated, link);
-                    format_base_posts.push(base_post);
+                        return Vec::new();
+                    } else {
+                        // 关键字段长度相等
+                        length = download_postpage_res.get("title").unwrap().len()
+                    }
+                } else {
+                    // 缺失title或link任意一个
+                    return Vec::new();
                 }
-                format_base_posts
-            });
-        }
+            }
+
+            let mut format_base_posts = vec![];
+            for i in 0..length {
+                let title = download_postpage_res.get("title").unwrap()[i]
+                    .trim()
+                    .to_string();
+                let link = download_postpage_res.get("link").unwrap()[i]
+                    .trim()
+                    .to_string();
+                // TODO 时间格式校验
+                let created = match download_postpage_res.get("created") {
+                    Some(ref v) => {
+                        if i < v.len() {
+                            // 如果有值，则使用该值
+                            tools::strftime_to_string_ymd(&v[i].trim())
+                        } else {
+                            // 否则使用当前时间
+                            tools::strptime_to_string_ymd(
+                                Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap()),
+                            )
+                        }
+                    }
+                    // 缺失created字段，否则使用当前时间
+                    None => tools::strptime_to_string_ymd(
+                        Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap()),
+                    ),
+                };
+                let updated = match download_postpage_res.get("updated") {
+                    Some(v) => {
+                        if i < v.len() {
+                            // 如果有值，则使用该值
+                            tools::strftime_to_string_ymd(&v[i].trim())
+                        } else {
+                            // 否则使用created
+                            created.clone()
+                        }
+                    }
+                    // 否则使用created
+                    None => created.clone(),
+                };
+
+                let base_post = metadata::BasePosts::new(title, created, updated, link);
+                format_base_posts.push(base_post);
+            }
+            format_base_posts
+        });
+
         for feed_suffix in [
             "atom.xml",
             "feed/atom",
@@ -104,13 +145,13 @@ async fn start_crawl_postpages(
         }
         while let Some(res) = joinset.join_next().await {
             if let Ok(success) = res {
-                println!("success:{:?}", success);
                 if success.len() > 0 {
-                    return success;
+                    // println!("success:{:?}", success);
+                    return Ok(success);
                 }
             }
         }
-        Vec::new()
+        Ok(Vec::new())
     } else {
         panic!("css_rule 格式错误");
     }
@@ -145,7 +186,7 @@ async fn start_crawl_linkpages(
                 .trim()
                 .to_string();
             let tm = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
-            let created_at = tools::strptime_to_string(tm);
+            let created_at = tools::strptime_to_string_ymdhms(tm);
             let base_post = metadata::Friends::new(author, link, avatar, false, created_at);
             format_base_friends.push(base_post);
         }
@@ -161,30 +202,32 @@ async fn main() {
     let client = ClientBuilder::new().timeout(timeout).build().unwrap();
     // let _cssrule = css_rules.clone();
     let format_base_friends = start_crawl_linkpages(&fc_settings, &css_rules, &client).await;
-    println!("{:?}", format_base_friends);
+    // println!("{:?}", format_base_friends);
     let mut final_res = vec![];
-    // let mut tasks = vec![];
-    for friend in format_base_friends {
+
+    for friend in format_base_friends.clone() {
         let fc_settings = fc_settings.clone();
         let client = client.clone();
         let css_rules = css_rules.clone();
         let r = tokio::spawn(async move {
             let format_base_posts =
-                start_crawl_postpages(friend.link, &fc_settings, &css_rules, &client).await;
-
+                start_crawl_postpages(friend.link, &fc_settings, &css_rules, &client)
+                    .await
+                    .unwrap();
+            
             format_base_posts
-            // println!("{:?}", format_base_posts);
+            
         })
         .await;
         let t = r.unwrap();
         if t.len() > 0 {
             final_res.push(t);
         }
+        
         // let format_base_posts =start_crawl_postpages(friend.link, &fc_settings, &css_rules, &client).await;
         // println!("{:?}",format_base_posts);
-        // break;
+        break;
     }
-
     println!("{:?}", final_res);
     println!("{:?}", final_res.len());
 
