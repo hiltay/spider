@@ -172,23 +172,29 @@ async fn start_crawl_linkpages(
     let mut format_base_friends = vec![];
     let start_urls = &settings.LINK;
     for linkmeta in start_urls {
-        let download_linkpage_res = downloader::crawl_link_page(
+        let download_linkpage_res = match downloader::crawl_link_page(
             &linkmeta.link,
             &linkmeta.theme,
             &css_rules["link_page_rules"],
             &client,
         )
-        .await
-        .unwrap(); // TODO match instead
+        .await{
+            Ok(v)=>v,
+            Err(err)=>{
+                println!("{}", err);
+                continue;
+            }
+        };
         let length = check_length(&download_linkpage_res);
         for i in 0..length {
             let author = download_linkpage_res.get("author").unwrap()[i]
                 .trim()
                 .to_string();
-            // TODO 时间格式校验
+            // TODO 链接拼接检查
             let link = download_linkpage_res.get("link").unwrap()[i]
                 .trim()
                 .to_string();
+            // TODO 链接拼接检查
             let avatar = download_linkpage_res.get("avatar").unwrap()[i]
                 .trim()
                 .to_string();
