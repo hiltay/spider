@@ -14,3 +14,4 @@ reqwest.workspace = true
 chrono.workspace = true
 # scraper.workspace = true
 nipper = "0.1.9"
+reqwest-middleware.workspace = true

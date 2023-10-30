@@ -4,7 +4,9 @@ use data_structures::{
     metadata::{self, Friends},
 };
 use downloader;
-use reqwest::{Client, ClientBuilder};
+use reqwest::{Client, ClientBuilder as CL};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::{self, task::JoinSet};
@@ -33,7 +35,7 @@ async fn start_crawl_postpages(
     settings: &Settings,
     extra_feed_suffix: String,
     css_rules: &tools::Value,
-    client: &Client,
+    client: &ClientWithMiddleware,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     let base_url = Url::parse(&base_postpage_url).unwrap(); // TODO 异常处理
     let css_rules = css_rules.clone();
@@ -135,7 +137,7 @@ async fn start_crawl_postpages(
             "rss2.xml",
             "feed",
             "index.xml",
-            extra_feed_suffix.as_str()
+            extra_feed_suffix.as_str(),
         ] {
             let client = client.clone();
             let feed_url = base_url.join(feed_suffix).unwrap(); // TODO
@@ -167,7 +169,7 @@ async fn start_crawl_postpages(
 async fn start_crawl_linkpages(
     settings: &Settings,
     css_rules: &tools::Value,
-    client: &Client,
+    client: &ClientWithMiddleware,
 ) -> Vec<metadata::Friends> {
     let mut format_base_friends = vec![];
     let start_urls = &settings.LINK;
@@ -178,9 +180,10 @@ async fn start_crawl_linkpages(
             &css_rules["link_page_rules"],
             &client,
         )
-        .await{
-            Ok(v)=>v,
-            Err(err)=>{
+        .await
+        {
+            Ok(v) => v,
+            Err(err) => {
                 println!("{}", err);
                 continue;
             }
@@ -207,12 +210,29 @@ async fn start_crawl_linkpages(
     format_base_friends
 }
 
+/// 构建请求客户端
+fn build_client() -> ClientWithMiddleware {
+    let timeout = Duration::new(60, 0);
+    let baseclient = CL::new()
+        .timeout(timeout)
+        .use_rustls_tls()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .unwrap();
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    let client = ClientBuilder::new(baseclient)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
+    client
+}
+
 #[tokio::main]
 async fn main() {
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
     let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
-    let timeout = Duration::new(60, 0);
-    let client = ClientBuilder::new().timeout(timeout).build().unwrap();
+
+    let client = build_client();
+
     // let _cssrule = css_rules.clone();
     let format_base_friends = start_crawl_linkpages(&fc_settings, &css_rules, &client).await;
     // println!("{:?}", format_base_friends);
@@ -220,17 +240,22 @@ async fn main() {
     let mut tasks = vec![];
 
     for friend in format_base_friends {
-        // if friend.link != "http://bigbigben.com/" {
+        // if friend.link != "https://akilar.top/" {
         //     continue;
         // }
         let fc_settings = fc_settings.clone();
         let client = client.clone();
         let css_rules = css_rules.clone();
         let task = tokio::spawn(async move {
-            let format_base_posts =
-                start_crawl_postpages(friend.link.clone(), &fc_settings, "".to_string(), &css_rules, &client)
-                    .await
-                    .unwrap();
+            let format_base_posts = start_crawl_postpages(
+                friend.link.clone(),
+                &fc_settings,
+                "".to_string(),
+                &css_rules,
+                &client,
+            )
+            .await
+            .unwrap();
             // println!("{:?}",format_base_posts);
             (friend, format_base_posts)
         });

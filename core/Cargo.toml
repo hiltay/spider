@@ -13,3 +13,5 @@ downloader = { path = "../downloader" }
 tokio.workspace = true
 chrono.workspace = true
 reqwest.workspace = true
+reqwest-middleware.workspace = true
+reqwest-retry.workspace = true

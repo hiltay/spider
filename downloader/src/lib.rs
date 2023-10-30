@@ -1,7 +1,8 @@
 use chrono::{FixedOffset, Utc};
 use data_structures::metadata;
 use feed_rs::parser;
-use reqwest::{Client, ClientBuilder};
+use reqwest::{Client};
+use reqwest_middleware::{ ClientWithMiddleware};
 use std::{collections::HashMap, vec};
 use tools;
 // time zones
@@ -12,7 +13,7 @@ pub async fn crawl_link_page<'a>(
     url: &str,
     theme: &str,
     css_rule: &serde_yaml::Value,
-    client: &Client,
+    client: &ClientWithMiddleware,
 ) -> Result<HashMap<&'a str, Vec<String>>, Box<dyn std::error::Error>> {
     if css_rule.is_mapping() {
         let theme_rule = match css_rule.get(theme) {
@@ -72,12 +73,12 @@ pub async fn crawl_link_page<'a>(
 pub async fn crawl_post_page<'a>(
     url: &str,
     css_rules: &serde_yaml::Mapping,
-    client: &Client,
+    client: &ClientWithMiddleware,
 ) -> Result<HashMap<&'a str, Vec<String>>, Box<dyn std::error::Error>> {
     // let html = reqwest::get(url).await?.text().await?;
     // DEBUG:
     // println!("{}", url);
-    let html = client.get(url).send().await?.text().await?;
+    let html = client.get(url).send().await?.error_for_status()?.text().await?;
     let document = nipper::Document::from(&html);
     // 返回结果init
     let mut result: HashMap<&str, Vec<String>> = HashMap::new();
@@ -149,11 +150,11 @@ pub async fn crawl_post_page<'a>(
 
 pub async fn crawl_post_page_feed(
     url: &str,
-    client: &Client,
+    client: &ClientWithMiddleware,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     // DEBUG:
     // println!("feed.....{}", url);
-    let html = client.get(url).send().await?.bytes().await?;
+    let html = client.get(url).send().await?.error_for_status()?.bytes().await?;
     // let html = reqwest::get(url).await?.bytes().await?;
     if let Ok(feed_from_xml) = parser::parse(html.as_ref()) {
         let entries = feed_from_xml.entries;
