@@ -31,6 +31,7 @@ fn check_length(download_res: &HashMap<&str, Vec<String>>) -> usize {
 async fn start_crawl_postpages(
     base_postpage_url: String,
     settings: &Settings,
+    extra_feed_suffix: String,
     css_rules: &tools::Value,
     client: &Client,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
@@ -53,29 +54,35 @@ async fn start_crawl_postpages(
                     Ok(v) => v,
                     Err(e) => {
                         println!("{}", e);
-                        HashMap::new()
+                        return Vec::new();
                     }
                 }; // TODO 异常处理
-            let mut length = 0;
+            let length;
             // 字段缺失检查
-            if download_postpage_res.len() != 4 {
-                if download_postpage_res.contains_key("title")
-                    && download_postpage_res.contains_key("link")
-                {
-                    if download_postpage_res.get("title").unwrap().len()
-                        != download_postpage_res.get("link").unwrap().len()
-                    {
-                        return Vec::new();
-                    } else {
-                        // 关键字段长度相等
-                        length = download_postpage_res.get("title").unwrap().len()
-                    }
-                } else {
-                    // 缺失title或link任意一个
-                    return Vec::new();
-                }
-            }
 
+            if download_postpage_res.contains_key("title")
+                && download_postpage_res.contains_key("link")
+            {
+                if download_postpage_res.get("title").unwrap().len()
+                    != download_postpage_res.get("link").unwrap().len()
+                {
+                    println!(
+                        "url: {} 解析结果缺失`title`或`link`长度不等",
+                        base_postpage_url
+                    );
+                    return Vec::new();
+                } else {
+                    // 关键字段长度相等
+                    length = download_postpage_res.get("title").unwrap().len()
+                }
+            } else {
+                // 缺失title或link任意一个
+                println!(
+                    "url: {} 解析结果缺失`title`或`link`任意一个",
+                    base_postpage_url
+                );
+                return Vec::new();
+            }
             let mut format_base_posts = vec![];
             for i in 0..length {
                 let title = download_postpage_res.get("title").unwrap()[i]
@@ -121,7 +128,6 @@ async fn start_crawl_postpages(
             }
             format_base_posts
         });
-
         for feed_suffix in [
             "atom.xml",
             "feed/atom",
@@ -129,6 +135,7 @@ async fn start_crawl_postpages(
             "rss2.xml",
             "feed",
             "index.xml",
+            extra_feed_suffix.as_str()
         ] {
             let client = client.clone();
             let feed_url = base_url.join(feed_suffix).unwrap(); // TODO
@@ -139,7 +146,7 @@ async fn start_crawl_postpages(
                         println!("{}", e);
                         Vec::new()
                     }
-                }; // TODO
+                };
                 res
             });
         }
@@ -172,7 +179,7 @@ async fn start_crawl_linkpages(
             &client,
         )
         .await
-        .unwrap();
+        .unwrap(); // TODO match instead
         let length = check_length(&download_linkpage_res);
         for i in 0..length {
             let author = download_linkpage_res.get("author").unwrap()[i]
@@ -198,38 +205,89 @@ async fn start_crawl_linkpages(
 async fn main() {
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
     let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
-    let timeout = Duration::new(5, 0);
+    let timeout = Duration::new(60, 0);
     let client = ClientBuilder::new().timeout(timeout).build().unwrap();
     // let _cssrule = css_rules.clone();
     let format_base_friends = start_crawl_linkpages(&fc_settings, &css_rules, &client).await;
     // println!("{:?}", format_base_friends);
-    let mut final_res = vec![];
+    let mut all_res = vec![];
+    let mut tasks = vec![];
 
-    for friend in format_base_friends.clone() {
+    for friend in format_base_friends {
+        // if friend.link != "http://bigbigben.com/" {
+        //     continue;
+        // }
         let fc_settings = fc_settings.clone();
         let client = client.clone();
         let css_rules = css_rules.clone();
-        let r = tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             let format_base_posts =
-                start_crawl_postpages(friend.link, &fc_settings, &css_rules, &client)
+                start_crawl_postpages(friend.link.clone(), &fc_settings, "".to_string(), &css_rules, &client)
                     .await
                     .unwrap();
-            
-            format_base_posts
-            
-        })
-        .await;
-        let t = r.unwrap();
-        if t.len() > 0 {
-            final_res.push(t);
-        }
-        
-        // let format_base_posts =start_crawl_postpages(friend.link, &fc_settings, &css_rules, &client).await;
-        // println!("{:?}",format_base_posts);
-        break;
+            // println!("{:?}",format_base_posts);
+            (friend, format_base_posts)
+        });
+        tasks.push(task);
     }
-    println!("{:?}", final_res);
-    println!("{:?}", final_res.len());
+    // 处理配置项友链
+    if fc_settings.SETTINGS_FRIENDS_LINKS.enable {
+        println!("处理配置项友链...");
+        // TODO json_api impl
+        let settings_friend_postpages = fc_settings.SETTINGS_FRIENDS_LINKS.list.clone();
+        for postpage_vec in settings_friend_postpages {
+            let tm = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
+            let created_at = tools::strptime_to_string_ymdhms(tm);
+            let base_post = metadata::Friends::new(
+                postpage_vec[0].clone(),
+                postpage_vec[1].clone(),
+                postpage_vec[2].clone(),
+                false,
+                created_at,
+            );
+            // 请求主页面
+            let fc_settings = fc_settings.clone();
+            let client = client.clone();
+            let css_rules = css_rules.clone();
+            let task = tokio::spawn(async move {
+                let format_base_posts = start_crawl_postpages(
+                    base_post.link.clone(),
+                    &fc_settings,
+                    if postpage_vec.len() == 3 {
+                        String::from("")
+                    } else if postpage_vec.len() == 4 {
+                        postpage_vec[3].clone()
+                    } else {
+                        panic!("`SETTINGS_FRIENDS_LINKS-list`下的数组长度只能为3或4");
+                    },
+                    &css_rules,
+                    &client,
+                )
+                .await
+                .unwrap();
+                // println!("{:?}",format_base_posts);
+                (base_post, format_base_posts)
+            });
+            tasks.push(task);
+        }
+    }
+    for task in tasks {
+        let res = task.await.unwrap();
+        all_res.push(res);
+    }
+    let mut success_friends = Vec::new();
+    let mut failed_friends = Vec::new();
+
+    for crawl_res in all_res {
+        if crawl_res.1.len() > 0 {
+            success_friends.push(crawl_res.0);
+        } else {
+            failed_friends.push(crawl_res.0);
+        }
+    }
+    println!("成功数 {:?}", success_friends.len());
+    println!("失败数 {:?}", failed_friends.len());
+    println!("失败友链 {:?}", failed_friends);
 
     // let settings_friends_links = &settings.SETTINGS_FRIENDS_LINKS;;
 
@@ -237,5 +295,5 @@ async fn main() {
     //     let r = t.await.unwrap();
     //     println!("{:?}", r);
     // }
-    // println!("{:#?}", format_base_posts);
+    // println!("{:?}", all_res);
 }

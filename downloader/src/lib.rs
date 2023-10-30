@@ -24,23 +24,23 @@ pub async fn crawl_link_page<'a>(
         // 返回结果init
         let mut result: HashMap<&str, Vec<String>> = HashMap::new();
         for rule in ["author", "link", "avatar"] {
-            let fields = theme_rule.get(rule).ok_or(format!("`{rule}` 字段缺失"))?;
+            let fields = theme_rule.get(rule).ok_or(format!("`{theme}-{rule}` 字段缺失"))?;
             let fields = fields
                 .as_sequence()
-                .ok_or(format!("`{rule}-selector` 字段格式错误"))?;
+                .ok_or(format!("`{theme}-{rule}` 字段格式错误"))?;
 
             let mut res = vec![];
             for field in fields {
                 let match_rule: &str = field
                     .get("selector")
-                    .ok_or(format!("`{rule}-selector` 字段缺失"))?
+                    .ok_or(format!("`{theme}-{rule}-selector` 字段缺失"))?
                     .as_str()
-                    .ok_or(format!("`{rule}-selector` 字段格式错误"))?;
+                    .ok_or(format!("`{theme}-{rule}-selector` 字段格式错误"))?;
                 let attr = field
                     .get("attr")
-                    .ok_or(format!("`{rule}-attr` 字段缺失"))?
+                    .ok_or(format!("`{theme}-{rule}-attr` 字段缺失"))?
                     .as_str()
-                    .ok_or(format!("`{rule}-attr` 字段格式错误"))?;
+                    .ok_or(format!("`{theme}-{rule}-attr` 字段格式错误"))?;
 
                 for elem in document.select(match_rule).iter() {
                     let parsed_field = match attr {
@@ -75,6 +75,8 @@ pub async fn crawl_post_page<'a>(
     client: &Client,
 ) -> Result<HashMap<&'a str, Vec<String>>, Box<dyn std::error::Error>> {
     // let html = reqwest::get(url).await?.text().await?;
+    // DEBUG:
+    // println!("{}", url);
     let html = client.get(url).send().await?.text().await?;
     let document = nipper::Document::from(&html);
     // 返回结果init
@@ -85,48 +87,63 @@ pub async fn crawl_post_page<'a>(
             .0
             .as_str()
             .ok_or(format!("无法解析字段，需要一个字符串"))?;
+        used_css_rules.push(use_theme);
         for current_field in ["title", "link", "created", "updated"] {
-            let field = css_rule.1.get(current_field).ok_or(format!("`{current_field}` 字段缺失"))?;
-            let match_rule = field
-                .get("selector")
-                .ok_or(format!("`{current_field}-selector` 字段缺失"))?
-                .as_str()
-                .ok_or(format!("`{current_field}-selector` 字段格式错误"))?;
-            let attr = field
-                .get("attr")
-                .ok_or(format!("`{current_field}-attr` 字段缺失"))?
-                .as_str()
-                .ok_or(format!("`{current_field}-attr` 字段格式错误"))?;
-            let mut res = vec![];
-            for elem in document.select(match_rule).iter() {
-                let parsed_field = match attr {
-                    "text" => elem.text().to_string(),
-                    _ => match elem.attr(attr).map(|r| r.to_string()) {
-                        Some(v) => v,
-                        None => continue,
-                    },
-                };
-                res.push(parsed_field);
-            }
-            if res.len() > 0 && !result.contains_key(current_field) {
-                // println!(
-                //     "页面：{},字段：{},使用规则:{},解析结果：{:?}",
-                //     url, current_field, use_theme, res
-                // );
-                used_css_rules.push(use_theme);
-                result.insert(current_field, res);
-                // 全部字段解析完毕
-                if result.len() == 4 {
-                    break 'outer;
+            let fields = css_rule.1.get(current_field).ok_or(format!("`{use_theme}-{current_field}` 字段缺失"))?;
+            let fields = fields
+                .as_sequence()
+                .ok_or(format!("`{use_theme}-{current_field}` 字段格式错误"))?;
+            
+            for field in fields {
+                let match_rule: &str = field
+                    .get("selector")
+                    .ok_or(format!("`{use_theme}-{current_field}-selector` 字段缺失"))?
+                    .as_str()
+                    .ok_or(format!("`{use_theme}-{current_field}-selector` 字段格式错误"))?;
+                let attr = field
+                    .get("attr")
+                    .ok_or(format!("`{use_theme}-{current_field}-attr` 字段缺失"))?
+                    .as_str()
+                    .ok_or(format!("`{use_theme}-{current_field}-attr` 字段格式错误"))?;
+                
+                let mut res = vec![];
+                for elem in document.select(match_rule).iter() {
+                    let parsed_field = match attr {
+                        "text" => elem.text().to_string(),
+                        _ => match elem.attr(attr).map(|r| r.to_string()) {
+                            Some(v) => v,
+                            None => continue,
+                        },
+                    };
+                    res.push(parsed_field);
                 }
-            };
+                if res.len() > 0 {
+                    // DEBUG:
+                    // println!("{}-{}-{}-{}",use_theme, match_rule,attr,current_field);
+                    if !result.contains_key(current_field) {
+                        result.insert(current_field, res);
+                        // 全部字段解析完毕
+                        if result.len() == 4 {
+                            break 'outer;
+                        }
+                    }
+                } else {
+                    // DEBUG:
+                    // println!(
+                    //     "页面：{},字段：{},使用规则:{},解析结果：{:?}",
+                    //     url, current_field, use_theme, res
+                    // );
+                };
+            }
         }
-
     }
-    // println!(
-    //     "页面：{}, 使用规则：{:?}, 解析结果：{:?}",
-    //     url, used_css_rules, result
-    // );
+    // DEBUG:
+    // if result.len() < 4 {
+    //     println!(
+    //         "页面：{}, 已使用规则：{:?}, 解析结果：{:?}",
+    //         url, used_css_rules, result
+    //     );
+    // }
     Ok(result)
 }
 
@@ -134,6 +151,7 @@ pub async fn crawl_post_page_feed(
     url: &str,
     client: &Client,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
+    // DEBUG:
     // println!("feed.....{}", url);
     let html = client.get(url).send().await?.bytes().await?;
     // let html = reqwest::get(url).await?.bytes().await?;
@@ -156,7 +174,9 @@ pub async fn crawl_post_page_feed(
             // 时间
             let created = match entry.published {
                 Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
-                None => tools::strptime_to_string_ymd(Utc::now().with_timezone(&BEIJING_OFFSET.unwrap())),
+                None => tools::strptime_to_string_ymd(
+                    Utc::now().with_timezone(&BEIJING_OFFSET.unwrap()),
+                ),
             };
 
             let updated = match entry.updated {
