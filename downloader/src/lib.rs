@@ -2,12 +2,22 @@ use chrono::{FixedOffset, Utc};
 use data_structures::metadata;
 use feed_rs::parser;
 use reqwest::{Client};
-use reqwest_middleware::{ ClientWithMiddleware};
+use reqwest_middleware::{ClientWithMiddleware,RequestBuilder};
 use std::{collections::HashMap, vec};
 use tools;
 // time zones
 // +08:00
 pub static BEIJING_OFFSET: Option<FixedOffset> = FixedOffset::east_opt(8 * 60 * 60);
+
+trait BlockRequest {
+    fn check_block_keys(self, block_list: Vec<String>) -> Self;
+}
+
+impl BlockRequest for RequestBuilder {
+    fn check_block_keys(self, block_list: Vec<String>) -> Self{
+        self
+    }
+}
 
 pub async fn crawl_link_page<'a>(
     url: &str,
@@ -25,7 +35,9 @@ pub async fn crawl_link_page<'a>(
         // 返回结果init
         let mut result: HashMap<&str, Vec<String>> = HashMap::new();
         for rule in ["author", "link", "avatar"] {
-            let fields = theme_rule.get(rule).ok_or(format!("`{theme}-{rule}` 字段缺失"))?;
+            let fields = theme_rule
+                .get(rule)
+                .ok_or(format!("`{theme}-{rule}` 字段缺失"))?;
             let fields = fields
                 .as_sequence()
                 .ok_or(format!("`{theme}-{rule}` 字段格式错误"))?;
@@ -78,7 +90,13 @@ pub async fn crawl_post_page<'a>(
     // let html = reqwest::get(url).await?.text().await?;
     // DEBUG:
     // println!("{}", url);
-    let html = client.get(url).send().await?.error_for_status()?.text().await?;
+    let html = client
+        .get(url)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
     let document = nipper::Document::from(&html);
     // 返回结果init
     let mut result: HashMap<&str, Vec<String>> = HashMap::new();
@@ -90,23 +108,28 @@ pub async fn crawl_post_page<'a>(
             .ok_or(format!("无法解析字段，需要一个字符串"))?;
         used_css_rules.push(use_theme);
         for current_field in ["title", "link", "created", "updated"] {
-            let fields = css_rule.1.get(current_field).ok_or(format!("`{use_theme}-{current_field}` 字段缺失"))?;
+            let fields = css_rule
+                .1
+                .get(current_field)
+                .ok_or(format!("`{use_theme}-{current_field}` 字段缺失"))?;
             let fields = fields
                 .as_sequence()
                 .ok_or(format!("`{use_theme}-{current_field}` 字段格式错误"))?;
-            
+
             for field in fields {
                 let match_rule: &str = field
                     .get("selector")
                     .ok_or(format!("`{use_theme}-{current_field}-selector` 字段缺失"))?
                     .as_str()
-                    .ok_or(format!("`{use_theme}-{current_field}-selector` 字段格式错误"))?;
+                    .ok_or(format!(
+                        "`{use_theme}-{current_field}-selector` 字段格式错误"
+                    ))?;
                 let attr = field
                     .get("attr")
                     .ok_or(format!("`{use_theme}-{current_field}-attr` 字段缺失"))?
                     .as_str()
                     .ok_or(format!("`{use_theme}-{current_field}-attr` 字段格式错误"))?;
-                
+
                 let mut res = vec![];
                 for elem in document.select(match_rule).iter() {
                     let parsed_field = match attr {
@@ -154,7 +177,13 @@ pub async fn crawl_post_page_feed(
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     // DEBUG:
     // println!("feed.....{}", url);
-    let html = client.get(url).send().await?.error_for_status()?.bytes().await?;
+    let html = client
+        .get(url)
+        .send()
+        .await?
+        .error_for_status()?
+        .bytes()
+        .await?;
     // let html = reqwest::get(url).await?.bytes().await?;
     if let Ok(feed_from_xml) = parser::parse(html.as_ref()) {
         let entries = feed_from_xml.entries;
