@@ -1,8 +1,8 @@
 use chrono::{FixedOffset, Utc};
 use data_structures::metadata;
 use feed_rs::parser;
-use reqwest::{Client};
-use reqwest_middleware::{ClientWithMiddleware,RequestBuilder};
+use reqwest::Client;
+use reqwest_middleware::{ClientWithMiddleware, RequestBuilder};
 use std::{collections::HashMap, vec};
 use tools;
 // time zones
@@ -14,7 +14,7 @@ trait BlockRequest {
 }
 
 impl BlockRequest for RequestBuilder {
-    fn check_block_keys(self, block_list: Vec<String>) -> Self{
+    fn check_block_keys(self, block_list: Vec<String>) -> Self {
         self
     }
 }
@@ -58,10 +58,12 @@ pub async fn crawl_link_page<'a>(
                 for elem in document.select(match_rule).iter() {
                     let parsed_field = match attr {
                         "text" => elem.text().to_string(),
-                        _ => elem
+                        _ => match elem
                             .attr(attr)
-                            .map(|r| r.to_string())
-                            .unwrap_or(String::from("")),
+                            .map(|r| r.to_string()){
+                                Some(v) => v,
+                                None =>continue,
+                            },
                         // _ => String::from(""),
                     };
                     res.push(parsed_field);
@@ -76,6 +78,13 @@ pub async fn crawl_link_page<'a>(
 
             result.insert(rule, res);
         }
+        // DEBUG:
+        // if result.len() < 4 {
+        //     println!(
+        //         "页面：{}, 使用规则：{:?}, 解析结果：{:#?}",
+        //         url, theme, result
+        //     );
+        // }
         Ok(result)
     } else {
         panic!("css_rule 格式错误");

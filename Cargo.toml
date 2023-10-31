@@ -1,5 +1,5 @@
 [workspace]
-members = ["downloader", "data_structures", "core", "tools"]
+members = ["downloader", "data_structures", "core", "tools", "db"]
 resolver = "2"
 
 [workspace.dependencies]

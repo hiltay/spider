@@ -13,21 +13,28 @@ use tokio::{self, task::JoinSet};
 use tools;
 use url::Url;
 
-fn check_length(download_res: &HashMap<&str, Vec<String>>) -> usize {
-    let mut length = 0;
-
-    for field in download_res.iter() {
-        let len = field.1.len();
-        if length == 0 {
-            length = len;
-        } else if length != len {
-            // TODO 更好的逻辑？
-            println!("爬取的字段长度不统一");
-            return 0;
-            // length = if length > len { len } else { length };
-        }
+fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize {
+    if !download_res.contains_key("author")
+        || !download_res.contains_key("link")
+        || !download_res.contains_key("avatar")
+    {
+        println!("字段`author`或字段`link`或字段`avatar`缺失，请检查css规则");
+        return 0;
     }
-    length
+    let author_field = download_res.get("author").unwrap();
+    let link_field = download_res.get("link").unwrap();
+    if author_field.len() == 0 || link_field.len() == 0 {
+        return 0;
+    } else if author_field.len() != link_field.len() {
+        println!(
+            "字段`author`长度: {}, 字段`link`长度: {},不统一，请检查css规则",
+            author_field.len(),
+            link_field.len()
+        );
+        return 0;
+    } else {
+        return author_field.len();
+    }
 }
 
 async fn start_crawl_postpages(
@@ -188,7 +195,7 @@ async fn start_crawl_linkpages(
                 continue;
             }
         };
-        let length = check_length(&download_linkpage_res);
+        let length = check_linkpage_res_length(&download_linkpage_res);
         for i in 0..length {
             let author = download_linkpage_res.get("author").unwrap()[i]
                 .trim()
@@ -198,9 +205,17 @@ async fn start_crawl_linkpages(
                 .trim()
                 .to_string();
             // TODO 链接拼接检查
-            let avatar = download_linkpage_res.get("avatar").unwrap()[i]
-                .trim()
-                .to_string();
+            let avatar;
+            let _avatar = download_linkpage_res.get("avatar").unwrap();
+            if i < _avatar.len() {
+                avatar = download_linkpage_res.get("avatar").unwrap()[i]
+                    .trim()
+                    .to_string();
+            } else {
+                // 默认图片
+                avatar =
+                    String::from("https://sdn.geekzu.org/avatar/57d8260dfb55501c37dde588e7c3852c")
+            }
             let tm = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
             let created_at = tools::strptime_to_string_ymdhms(tm);
             let base_post = metadata::Friends::new(author, link, avatar, false, created_at);

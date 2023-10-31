@@ -1,5 +1,3 @@
-# defaul css rules
-#
 # 主页规则
 post_page_rules:
   {
@@ -23,6 +21,37 @@ post_page_rules:
           [
             {
               selector: "#recent-posts .recent-post-info .post-meta-date time:first-of-type",
+              attr: "text",
+            },
+          ],
+        updated:
+          [
+            {
+              selector: "#recent-posts .recent-post-info .post-meta-date time:nth-of-type(2)",
+              attr: "text",
+            },
+          ],
+      },
+    anzhiyu:
+      {
+        title:
+          [
+            {
+              selector: "#recent-posts>.recent-post-item .recent-post-info .article-title",
+              attr: "text",
+            },
+          ],
+        link:
+          [
+            {
+              selector: "#recent-posts>.recent-post-item .recent-post-info .article-title",
+              attr: "href",
+            },
+          ],
+        created:
+          [
+            {
+              selector: "#recent-posts > div.recent-post-item.lastestpost-item > div.recent-post-info > div.article-meta-wrap > span.post-meta-date > time",
               attr: "text",
             },
           ],
@@ -240,6 +269,12 @@ link_page_rules:
         author: [{ selector: ".card-link span", attr: "text" }],
         link: [{ selector: ".card-link", attr: "href" }],
         avatar: [{ selector: ".card-link img", attr: "src" }],
+      },
+    anzhiyu:
+      {
+        author: [{ selector: ".cf-friends-name", attr: "text" }],
+        link: [{ selector: "a.cf-friends-link", attr: "cf-href" }],
+        avatar: [{ selector: ".cf-friends-avatar", attr: "cf-src" }],
       },
     common1:
       {
