@@ -214,7 +214,6 @@ dependencies = [
  "reqwest-retry",
  "tokio",
  "tools",
- "url",
 ]
 
 [[package]]
@@ -325,7 +324,6 @@ name = "db"
 version = "0.1.0"
 dependencies = [
  "sqlx",
- "tokio",
 ]
 
 [[package]]
@@ -383,6 +381,7 @@ dependencies = [
  "serde_yaml",
  "tokio",
  "tools",
+ "url",
 ]
 
 [[package]]

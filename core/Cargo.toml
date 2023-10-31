@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 data_structures = { path = "../data_structures" }
-url = "2.4.1"
 tools = { path = "../tools" }
 downloader = { path = "../downloader" }
 tokio.workspace = true
