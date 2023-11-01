@@ -1,6 +1,6 @@
 use chrono::Utc;
 use data_structures::metadata::{self};
-use db::sqlite;
+use db::{mysql, sqlite};
 use downloader::download;
 use reqwest::ClientBuilder as CL;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -12,7 +12,7 @@ use tools;
 
 /// 构建请求客户端
 fn build_client() -> ClientWithMiddleware {
-    let timeout = Duration::new(60, 0);
+    let timeout = Duration::new(20, 0);
     let baseclient = CL::new()
         .timeout(timeout)
         .use_rustls_tls()
@@ -29,14 +29,6 @@ fn build_client() -> ClientWithMiddleware {
 #[tokio::main]
 async fn main() {
     let now = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
-    let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
-    match sqlx::migrate!("../db/schema").run(&dbpool).await {
-        Ok(()) => (),
-        Err(e) => {
-            println!("{}", e);
-            return;
-        }
-    };
 
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
     let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
@@ -121,28 +113,93 @@ async fn main() {
     let mut success_posts = Vec::new();
     let mut success_friends = Vec::new();
     let mut failed_friends = Vec::new();
-
-    for mut crawl_res in all_res {
-        if crawl_res.1.len() > 0 {
-            let posts = crawl_res.1.iter().map(|post| {
-                metadata::Posts::new(
-                    post.clone(),
-                    crawl_res.0.name.clone(),
-                    crawl_res.0.avatar.clone(),
-                    tools::strptime_to_string_ymdhms(now),
-                )
-            });
-            sqlite::bulk_insert_post_table(posts, &dbpool).await;
-            sqlite::insert_friend_table(&crawl_res.0, &dbpool).await;
-            success_friends.push(crawl_res.0);
-            success_posts.push(crawl_res.1);
-        } else {
-            crawl_res.0.error = true;
-            sqlite::insert_friend_table(&crawl_res.0, &dbpool).await;
-            failed_friends.push(crawl_res.0);
+    match fc_settings.DATABASE.as_str() {
+        "sqlite" => {
+            let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
+            match sqlx::migrate!("../db/schema/sqlite").run(&dbpool).await {
+                Ok(()) => (),
+                Err(e) => {
+                    println!("{}", e);
+                    return;
+                }
+            };
+            for mut crawl_res in all_res {
+                if crawl_res.1.len() > 0 {
+                    let posts = crawl_res.1.iter().map(|post| {
+                        metadata::Posts::new(
+                            post.clone(),
+                            crawl_res.0.name.clone(),
+                            crawl_res.0.avatar.clone(),
+                            tools::strptime_to_string_ymdhms(now),
+                        )
+                    });
+                    sqlite::bulk_insert_post_table(posts, &dbpool)
+                        .await
+                        .unwrap();
+                    sqlite::insert_friend_table(&crawl_res.0, &dbpool)
+                        .await
+                        .unwrap();
+                    success_friends.push(crawl_res.0);
+                    success_posts.push(crawl_res.1);
+                } else {
+                    crawl_res.0.error = true;
+                    sqlite::insert_friend_table(&crawl_res.0, &dbpool)
+                        .await
+                        .unwrap();
+                    failed_friends.push(crawl_res.0);
+                }
+            }
         }
-    }
-    println!("成功友链数 {}，失败友链数 {}", success_friends.len(),failed_friends.len());
-    println!("本次获取总文章数 {:?}", success_posts.len());
-    println!("失联友链明细 {}", serde_json::to_string_pretty(&failed_friends).unwrap());
+        "mysql" => {
+            // DEBUG
+            let mysqlconnstr = "mysql://root:123456@127.0.0.1:3306/pyq";
+            let dbpool = mysql::connect_mysql_dbpool(mysqlconnstr).await.unwrap();
+            match sqlx::migrate!("../db/schema/mysql").run(&dbpool).await {
+                Ok(()) => (),
+                Err(e) => {
+                    println!("{}", e);
+                    return;
+                }
+            };
+            for mut crawl_res in all_res {
+                if crawl_res.1.len() > 0 {
+                    let posts = crawl_res.1.iter().map(|post| {
+                        metadata::Posts::new(
+                            post.clone(),
+                            crawl_res.0.name.clone(),
+                            crawl_res.0.avatar.clone(),
+                            tools::strptime_to_string_ymdhms(now),
+                        )
+                    });
+                    mysql::bulk_insert_post_table(posts, &dbpool).await.unwrap();
+                    mysql::insert_friend_table(&crawl_res.0, &dbpool)
+                        .await
+                        .unwrap();
+                    success_friends.push(crawl_res.0);
+                    success_posts.push(crawl_res.1);
+                } else {
+                    crawl_res.0.error = true;
+                    mysql::insert_friend_table(&crawl_res.0, &dbpool)
+                        .await
+                        .unwrap();
+                    failed_friends.push(crawl_res.0);
+                }
+            }
+        }
+        _ => return,
+    };
+
+    println!(
+        "成功友链数 {}，失败友链数 {}",
+        success_friends.len(),
+        failed_friends.len()
+    );
+    println!(
+        "本次获取总文章数 {}",
+        success_posts.iter().fold(0, |acc, x| { acc + x.len() })
+    );
+    println!(
+        "失联友链明细 {}",
+        serde_json::to_string_pretty(&failed_friends).unwrap()
+    );
 }

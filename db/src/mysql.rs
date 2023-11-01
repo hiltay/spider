@@ -1,23 +1,14 @@
 use data_structures::metadata;
-use sqlx::{
-    query, sqlite::SqliteConnectOptions, sqlite::SqlitePool, sqlite::SqlitePoolOptions, Error,
-    QueryBuilder, Sqlite,
-};
-use std::path::Path;
-// use sqlx::mysql::MySqlPoolOptions;
-// etc.
+use sqlx::{mysql::MySqlPool, mysql::MySqlPoolOptions, query, Error, MySql, QueryBuilder};
 
-pub async fn connect_sqlite_dbpool(filename: impl AsRef<Path>) -> Result<SqlitePool, Error> {
-    let options = SqliteConnectOptions::new()
-        .filename(filename)
-        .create_if_missing(true);
-    SqlitePoolOptions::new()
+pub async fn connect_mysql_dbpool(url: &str) -> Result<MySqlPool, Error> {
+    MySqlPoolOptions::new()
         .max_connections(5)
-        .connect_with(options)
+        .connect(url)
         .await
 }
 
-pub async fn insert_post_table(post: &metadata::Posts, pool: &SqlitePool) -> Result<(), Error> {
+pub async fn insert_post_table(post: &metadata::Posts, pool: &MySqlPool) -> Result<(), Error> {
     let sql = "INSERT INTO posts
     (title, author, link, avatar ,rule,created,updated,createAt)
      VALUES (?, ?, ?,?, ?,?, ?, ?)";
@@ -37,7 +28,7 @@ pub async fn insert_post_table(post: &metadata::Posts, pool: &SqlitePool) -> Res
 
 pub async fn insert_friend_table(
     friends: &metadata::Friends,
-    pool: &SqlitePool,
+    pool: &MySqlPool,
 ) -> Result<(), Error> {
     let sql = "INSERT INTO friends (name, link, avatar, error,createAt) VALUES (?, ?, ?, ?, ?)";
     let q = query(sql)
@@ -53,9 +44,9 @@ pub async fn insert_friend_table(
 
 pub async fn bulk_insert_post_table(
     tuples: impl Iterator<Item = metadata::Posts>,
-    pool: &SqlitePool,
+    pool: &MySqlPool,
 ) -> Result<(), Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+    let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
         // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
         // spaces as that might interfere with identifiers or quoted strings where exact
         // values may matter.
@@ -82,9 +73,9 @@ pub async fn bulk_insert_post_table(
 
 pub async fn bulk_insert_friend_table(
     tuples: impl Iterator<Item = metadata::Friends>,
-    pool: &SqlitePool,
+    pool: &MySqlPool,
 ) -> Result<(), Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+    let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
         // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
         // spaces as that might interfere with identifiers or quoted strings where exact
         // values may matter.
