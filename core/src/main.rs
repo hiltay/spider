@@ -124,15 +124,32 @@ async fn main() {
 
     for crawl_res in all_res {
         if crawl_res.1.len() > 0 {
-            for post in crawl_res.1.iter() {
-                let posts = metadata::Posts::new(
+            // for post in crawl_res.1.iter() {
+            //     let posts = metadata::Posts::new(
+            //         post.clone(),
+            //         crawl_res.0.name.clone(),
+            //         crawl_res.0.avatar.clone(),
+            //         tools::strptime_to_string_ymdhms(now),
+            //     );
+            //     sqlite::insert_post_table(&posts, &dbpool).await.unwrap();
+            // }
+            let posts = crawl_res.1.iter().map(|post| {
+                metadata::Posts::new(
                     post.clone(),
                     crawl_res.0.name.clone(),
                     crawl_res.0.avatar.clone(),
                     tools::strptime_to_string_ymdhms(now),
-                );
-                sqlite::insert_post_table(&posts, &dbpool).await.unwrap();
-            }
+                )
+            });
+            sqlite::bulk_insert_post_table(posts,&dbpool).await;
+            //     let posts = metadata::Posts::new(
+            //         post.clone(),
+            //         crawl_res.0.name.clone(),
+            //         crawl_res.0.avatar.clone(),
+            //         tools::strptime_to_string_ymdhms(now),
+            //     );
+            //     sqlite::insert_post_table(&posts, &dbpool).await.unwrap();
+            // }
 
             success_friends.push(crawl_res.0);
             success_posts.push(crawl_res.1);

@@ -8,7 +8,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use std::collections::HashMap;
 use tokio::{self, task::JoinSet};
 use tools;
-use url::Url;
+use url::{ParseError, Url};
 
 fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize {
     if !download_res.contains_key("author")
@@ -52,7 +52,8 @@ pub async fn start_crawl_postpages(
             .as_mapping()
             .unwrap();
         let css_rules = css_rules.clone();
-        let client_ = client.clone();
+        let client_: ClientWithMiddleware = client.clone();
+        let base_url_ = base_url.clone();
         joinset.spawn(async move {
             // 获取当前时间
             let download_postpage_res =
@@ -91,13 +92,32 @@ pub async fn start_crawl_postpages(
             }
             let mut format_base_posts = vec![];
             for i in 0..length {
-                let title = download_postpage_res.get("title").unwrap()[i]
+                let mut title = download_postpage_res.get("title").unwrap()[i]
                     .trim()
                     .to_string();
+                if title.len() == 0 {
+                    title = String::from("无题")
+                };
                 let link = download_postpage_res.get("link").unwrap()[i]
                     .trim()
                     .to_string();
-                // TODO 时间格式校验
+                // 处理相对地址
+                let link = match Url::parse(&link) {
+                    Ok(_) => link,
+                    Err(parse_error) => match parse_error {
+                        ParseError::RelativeUrlWithoutBase => match base_url_.join(&link) {
+                            Ok(completion_url) => completion_url.to_string(),
+                            Err(e) => {
+                                println!("无法拼接相对地址：{},error：{}", link, e);
+                                continue;
+                            }
+                        },
+                        _ => {
+                            println!("无法处理地址：{}", link);
+                            continue;
+                        }
+                    },
+                };
                 let created = match download_postpage_res.get("created") {
                     Some(ref v) => {
                         if i < v.len() {
@@ -145,9 +165,12 @@ pub async fn start_crawl_postpages(
             extra_feed_suffix.as_str(),
         ] {
             let client = client.clone();
-            let feed_url = base_url.join(feed_suffix).unwrap(); // TODO
+            let base_url = base_url.clone();
+            let feed_url = base_url.join(feed_suffix)?;
             joinset.spawn(async move {
-                let res = match crawler::crawl_post_page_feed(feed_url.as_str(), &client).await {
+                let res = match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client)
+                    .await
+                {
                     Ok(v) => v,
                     Err(e) => {
                         println!("{}", e);

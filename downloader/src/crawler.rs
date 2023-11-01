@@ -4,6 +4,7 @@ use feed_rs::parser;
 use reqwest_middleware::{ClientWithMiddleware, RequestBuilder};
 use std::{collections::HashMap, vec};
 use tools;
+use url::{ParseError, Url};
 // time zones
 // +08:00
 pub static BEIJING_OFFSET: Option<FixedOffset> = FixedOffset::east_opt(8 * 60 * 60);
@@ -181,6 +182,7 @@ pub async fn crawl_post_page<'a>(
 
 pub async fn crawl_post_page_feed(
     url: &str,
+    base_url: &Url,
     client: &ClientWithMiddleware,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     // DEBUG:
@@ -206,12 +208,30 @@ pub async fn crawl_post_page_feed(
             let link = if entry.links.len() > 0 {
                 entry.links[0].href.clone()
             } else {
-                //TODO 日志记录
+                println!("feed无法解析url链接");
                 continue;
+            };
+            // 处理相对地址
+            let link = match Url::parse(&link) {
+                Ok(_) => link,
+                Err(parse_error) => match parse_error {
+                    ParseError::RelativeUrlWithoutBase => match base_url.join(&link) {
+                        Ok(completion_url) => completion_url.to_string(),
+                        Err(e) => {
+                            println!("无法拼接相对地址：{},error:{}", link, e);
+                            continue;
+                        }
+                    },
+                    _ => {
+                        println!("无法处理地址：{}", link);
+                        continue;
+                    }
+                },
             };
             // 时间
             let created = match entry.published {
                 Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
+                // 使用当前时间
                 None => tools::strptime_to_string_ymd(
                     Utc::now().with_timezone(&BEIJING_OFFSET.unwrap()),
                 ),
@@ -219,6 +239,7 @@ pub async fn crawl_post_page_feed(
 
             let updated = match entry.updated {
                 Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
+                // 使用创建时间
                 None => created.clone(),
             };
             let base_post =
