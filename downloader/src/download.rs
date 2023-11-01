@@ -128,8 +128,9 @@ pub async fn start_crawl_postpages(
                     // 否则使用created
                     None => created.clone(),
                 };
-
-                let base_post = metadata::BasePosts::new(title, created, updated, link);
+                let rules = download_postpage_res.get("rules").unwrap();
+                let base_post =
+                    metadata::BasePosts::new(title, created, updated, link, rules.join(","));
                 format_base_posts.push(base_post);
             }
             format_base_posts

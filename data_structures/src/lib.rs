@@ -9,6 +9,7 @@ pub mod metadata {
         pub created: String,
         pub updated: String,
         pub link: String,
+        pub rule: String,
     }
 
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -17,17 +18,34 @@ pub mod metadata {
         pub meta: BasePosts,
         pub author: String,
         pub avatar: String,
-        pub rule: String,
         pub createAt: String,
     }
 
     impl BasePosts {
-        pub fn new(title: String, created: String, updated: String, link: String) -> BasePosts {
+        pub fn new(
+            title: String,
+            created: String,
+            updated: String,
+            link: String,
+            rule: String,
+        ) -> BasePosts {
             BasePosts {
                 title: title,
                 created: created,
                 updated: updated,
                 link: link,
+                rule: rule,
+            }
+        }
+    }
+
+    impl Posts {
+        pub fn new(meta: BasePosts, author: String, avatar: String, createAt: String) -> Posts {
+            Posts {
+                meta: meta,
+                author: author,
+                avatar: avatar,
+                createAt: createAt,
             }
         }
     }

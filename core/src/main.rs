@@ -1,9 +1,11 @@
 use chrono::Utc;
 use data_structures::metadata::{self};
+use db::sqlite;
 use downloader::download;
 use reqwest::ClientBuilder as CL;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use sqlx;
 use std::time::Duration;
 use tokio::{self};
 use tools;
@@ -26,6 +28,16 @@ fn build_client() -> ClientWithMiddleware {
 
 #[tokio::main]
 async fn main() {
+    let now = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
+    let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
+    match sqlx::migrate!("../db/schema").run(&dbpool).await {
+        Ok(()) => (),
+        Err(e) => {
+            println!("{}", e);
+            return;
+        }
+    };
+
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
     let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
 
@@ -60,13 +72,14 @@ async fn main() {
         });
         tasks.push(task);
     }
+
     // 处理配置项友链
     if fc_settings.SETTINGS_FRIENDS_LINKS.enable {
         println!("处理配置项友链...");
         // TODO json_api impl
         let settings_friend_postpages = fc_settings.SETTINGS_FRIENDS_LINKS.list.clone();
         for postpage_vec in settings_friend_postpages {
-            let tm = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
+            let tm = now;
             let created_at = tools::strptime_to_string_ymdhms(tm);
             let base_post = metadata::Friends::new(
                 postpage_vec[0].clone(),
@@ -105,20 +118,32 @@ async fn main() {
         let res = task.await.unwrap();
         all_res.push(res);
     }
+    let mut success_posts = Vec::new();
     let mut success_friends = Vec::new();
     let mut failed_friends = Vec::new();
 
     for crawl_res in all_res {
         if crawl_res.1.len() > 0 {
+            for post in crawl_res.1.iter() {
+                let posts = metadata::Posts::new(
+                    post.clone(),
+                    crawl_res.0.name.clone(),
+                    crawl_res.0.avatar.clone(),
+                    tools::strptime_to_string_ymdhms(now),
+                );
+                sqlite::insert_post_table(&posts, &dbpool).await.unwrap();
+            }
+
             success_friends.push(crawl_res.0);
+            success_posts.push(crawl_res.1);
         } else {
             failed_friends.push(crawl_res.0);
         }
     }
     println!("成功数 {:?}", success_friends.len());
     println!("失败数 {:?}", failed_friends.len());
-    println!("失败友链 {:?}", failed_friends);
-
+    // println!("成功 {:?}", success_posts);
+    // sqlite::inster_post_table(post, &dbpool)
     // let settings_friends_links = &settings.SETTINGS_FRIENDS_LINKS;;
 
     // for t in tasks {

@@ -106,13 +106,14 @@ pub async fn crawl_post_page<'a>(
     let document = nipper::Document::from(&html);
     // 返回结果init
     let mut result: HashMap<&str, Vec<String>> = HashMap::new();
+    // 使用过的css规则
     let mut used_css_rules = vec![];
     'outer: for css_rule in css_rules {
         let use_theme = css_rule
             .0
             .as_str()
             .ok_or(format!("无法解析字段，需要一个字符串"))?;
-        used_css_rules.push(use_theme);
+        used_css_rules.push(use_theme.to_string());
         for current_field in ["title", "link", "created", "updated"] {
             let fields = css_rule
                 .1
@@ -174,6 +175,7 @@ pub async fn crawl_post_page<'a>(
     //         url, used_css_rules, result
     //     );
     // }
+    result.insert("rules", used_css_rules);
     Ok(result)
 }
 
@@ -219,7 +221,7 @@ pub async fn crawl_post_page_feed(
                 Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
                 None => created.clone(),
             };
-            let base_post = metadata::BasePosts::new(title, created, updated, link);
+            let base_post = metadata::BasePosts::new(title, created, updated, link, "feed".to_string());
             format_base_posts.push(base_post);
         }
         Ok(format_base_posts)

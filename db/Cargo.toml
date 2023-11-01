@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 sqlx.workspace = true
+data_structures = { path = "../data_structures" }

@@ -9,8 +9,10 @@ edition = "2021"
 data_structures = { path = "../data_structures" }
 tools = { path = "../tools" }
 downloader = { path = "../downloader" }
+db = { path = "../db" }
 tokio.workspace = true
 chrono.workspace = true
+sqlx.workspace = true
 reqwest.workspace = true
 reqwest-middleware.workspace = true
 reqwest-retry.workspace = true

@@ -208,10 +208,12 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "data_structures",
+ "db",
  "downloader",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
+ "sqlx",
  "tokio",
  "tools",
 ]
@@ -323,6 +325,7 @@ dependencies = [
 name = "db"
 version = "0.1.0"
 dependencies = [
+ "data_structures",
  "sqlx",
 ]
 
