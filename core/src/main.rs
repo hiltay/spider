@@ -134,6 +134,7 @@ async fn main() {
                             tools::strptime_to_string_ymdhms(now),
                         )
                     });
+                    sqlite::delete_post_table(posts.clone(), &dbpool).await.unwrap();
                     sqlite::bulk_insert_post_table(posts, &dbpool)
                         .await
                         .unwrap();
@@ -172,6 +173,7 @@ async fn main() {
                             tools::strptime_to_string_ymdhms(now),
                         )
                     });
+                    mysql::delete_post_table(posts.clone(), &dbpool).await.unwrap();
                     mysql::bulk_insert_post_table(posts, &dbpool).await.unwrap();
                     mysql::insert_friend_table(&crawl_res.0, &dbpool)
                         .await

@@ -104,3 +104,18 @@ pub async fn bulk_insert_friend_table(
     query.execute(pool).await?;
     Ok(())
 }
+
+pub async fn delete_post_table(
+    tuples: impl Iterator<Item = metadata::Posts>,
+    pool: &SqlitePool,
+) -> Result<(), Error> {
+    let sql = "DELETE FROM posts WHERE link= ? and author = ? ";
+    for posts in tuples {
+        query(sql)
+            .bind(posts.meta.link)
+            .bind(posts.author)
+            .execute(pool)
+            .await?;
+    }
+    Ok(())
+}
