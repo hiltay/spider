@@ -9,3 +9,4 @@ edition = "2021"
 data_structures = { path = "../data_structures" }
 serde_yaml.workspace = true
 chrono.workspace = true
+dotenvy = "0.15.7"

@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use data_structures::config;
+use dotenvy;
 pub use serde_yaml::Value;
 use std::fs::File;
 use std::io::{self};
@@ -23,7 +24,7 @@ pub fn strftime_to_string_ymd(strftime: &str) -> String {
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d%H:%M:%S",
         "%Y-%m-%dT%H:%M:%S.000Z", // 2021-11-12T01:24:06.000Z
-        "%Y年%m月%d日", // xxxx年xx月xx日
+        "%Y年%m月%d日",           // xxxx年xx月xx日
     ];
     for fmt in fmts {
         if let Ok(v) = NaiveDateTime::parse_from_str(strftime, fmt) {
@@ -47,4 +48,10 @@ pub fn get_yaml_settings(path: &str) -> io::Result<config::Settings> {
         Ok(config) => Ok(config),
         Err(err) => panic!("{}", err),
     }
+}
+
+pub fn load_mysql_conn_env() -> Result<String, Box<dyn std::error::Error>> {
+    let r = dotenvy::dotenv()?;
+    println!("{:?}",r);
+    Ok(dotenvy::var("MYSQL_URI")?)
 }

@@ -115,6 +115,7 @@ async fn main() {
     let mut failed_friends = Vec::new();
     match fc_settings.DATABASE.as_str() {
         "sqlite" => {
+            // get sqlite conn pool
             let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
             match sqlx::migrate!("../db/schema/sqlite").run(&dbpool).await {
                 Ok(()) => (),
@@ -151,9 +152,9 @@ async fn main() {
             }
         }
         "mysql" => {
-            // DEBUG
-            let mysqlconnstr = "mysql://root:123456@127.0.0.1:3306/pyq";
-            let dbpool = mysql::connect_mysql_dbpool(mysqlconnstr).await.unwrap();
+            // get mysql conn pool
+            let mysqlconnstr = tools::load_mysql_conn_env().unwrap();
+            let dbpool = mysql::connect_mysql_dbpool(&mysqlconnstr).await.unwrap();
             match sqlx::migrate!("../db/schema/mysql").run(&dbpool).await {
                 Ok(()) => (),
                 Err(e) => {
@@ -186,6 +187,7 @@ async fn main() {
                 }
             }
         }
+        // TODO mongodb
         _ => return,
     };
 
