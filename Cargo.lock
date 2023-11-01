@@ -213,6 +213,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
+ "serde_json",
  "sqlx",
  "tokio",
  "tools",

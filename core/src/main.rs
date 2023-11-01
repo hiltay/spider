@@ -122,17 +122,8 @@ async fn main() {
     let mut success_friends = Vec::new();
     let mut failed_friends = Vec::new();
 
-    for crawl_res in all_res {
+    for mut crawl_res in all_res {
         if crawl_res.1.len() > 0 {
-            // for post in crawl_res.1.iter() {
-            //     let posts = metadata::Posts::new(
-            //         post.clone(),
-            //         crawl_res.0.name.clone(),
-            //         crawl_res.0.avatar.clone(),
-            //         tools::strptime_to_string_ymdhms(now),
-            //     );
-            //     sqlite::insert_post_table(&posts, &dbpool).await.unwrap();
-            // }
             let posts = crawl_res.1.iter().map(|post| {
                 metadata::Posts::new(
                     post.clone(),
@@ -141,31 +132,17 @@ async fn main() {
                     tools::strptime_to_string_ymdhms(now),
                 )
             });
-            sqlite::bulk_insert_post_table(posts,&dbpool).await;
-            //     let posts = metadata::Posts::new(
-            //         post.clone(),
-            //         crawl_res.0.name.clone(),
-            //         crawl_res.0.avatar.clone(),
-            //         tools::strptime_to_string_ymdhms(now),
-            //     );
-            //     sqlite::insert_post_table(&posts, &dbpool).await.unwrap();
-            // }
-
+            sqlite::bulk_insert_post_table(posts, &dbpool).await;
+            sqlite::insert_friend_table(&crawl_res.0, &dbpool).await;
             success_friends.push(crawl_res.0);
             success_posts.push(crawl_res.1);
         } else {
+            crawl_res.0.error = true;
+            sqlite::insert_friend_table(&crawl_res.0, &dbpool).await;
             failed_friends.push(crawl_res.0);
         }
     }
-    println!("成功数 {:?}", success_friends.len());
-    println!("失败数 {:?}", failed_friends.len());
-    // println!("成功 {:?}", success_posts);
-    // sqlite::inster_post_table(post, &dbpool)
-    // let settings_friends_links = &settings.SETTINGS_FRIENDS_LINKS;;
-
-    // for t in tasks {
-    //     let r = t.await.unwrap();
-    //     println!("{:?}", r);
-    // }
-    // println!("{:?}", all_res);
+    println!("成功友链数 {}，失败友链数 {}", success_friends.len(),failed_friends.len());
+    println!("本次获取总文章数 {:?}", success_posts.len());
+    println!("失联友链明细 {}", serde_json::to_string_pretty(&failed_friends).unwrap());
 }
