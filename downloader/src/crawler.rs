@@ -153,10 +153,10 @@ pub async fn crawl_post_page<'a>(
                     // println!("{}-{}-{}-{}",use_theme, match_rule,attr,current_field);
                     if !result.contains_key(current_field) {
                         result.insert(current_field, res);
-                        // 全部字段解析完毕
-                        if result.len() == 4 {
-                            break 'outer;
-                        }
+                    }
+                    // 全部字段解析完毕
+                    if result.len() == 4 {
+                        break 'outer;
                     }
                 } else {
                     // DEBUG:
@@ -221,7 +221,8 @@ pub async fn crawl_post_page_feed(
                 Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
                 None => created.clone(),
             };
-            let base_post = metadata::BasePosts::new(title, created, updated, link, "feed".to_string());
+            let base_post =
+                metadata::BasePosts::new(title, created, updated, link, "feed".to_string());
             format_base_posts.push(base_post);
         }
         Ok(format_base_posts)
