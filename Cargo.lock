@@ -380,6 +380,7 @@ dependencies = [
  "data_structures",
  "feed-rs",
  "nipper",
+ "regex",
  "reqwest",
  "reqwest-middleware",
  "serde_yaml",

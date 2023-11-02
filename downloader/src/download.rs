@@ -4,12 +4,18 @@ use data_structures::{
     config::Settings,
     metadata::{self},
 };
+use regex::Regex;
 use reqwest_middleware::ClientWithMiddleware;
 use std::collections::HashMap;
 use tokio::{self, task::JoinSet};
 use tools;
 use url::{ParseError, Url};
 
+/// 检查link页面解析结果的长度
+/// 如果字段`author`、`link`、`avatar`缺失，则返回0
+/// 否则，检查`author`和`link`的长度：
+/// - 是否为0：若有一个为0，返回0
+/// - 二者长度是否相等，如果不等，返回0，如果相等返回该长度
 fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize {
     if !download_res.contains_key("author")
         || !download_res.contains_key("link")
@@ -34,6 +40,17 @@ fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize
     }
 }
 
+/// 检查屏蔽url，匹配返回true，反之为false
+fn check_block_site(block_sites: &Vec<String>, url: &str) -> bool {
+    for pattern in block_sites {
+        let re = Regex::new(pattern).unwrap();
+        if re.is_match(url) {
+            return true;
+        }
+    }
+    false
+}
+
 pub async fn start_crawl_postpages(
     base_postpage_url: String,
     settings: &Settings,
@@ -41,6 +58,11 @@ pub async fn start_crawl_postpages(
     css_rules: &tools::Value,
     client: &ClientWithMiddleware,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
+    // check block url
+    let block_sites = &settings.BLOCK_SITE;
+    if check_block_site(block_sites, &base_postpage_url) {
+        return Ok(Vec::new());
+    };
     let base_url = Url::parse(&base_postpage_url).unwrap(); // TODO 异常处理
     let css_rules = css_rules.clone();
     let mut joinset = JoinSet::new();
@@ -202,6 +224,11 @@ pub async fn start_crawl_linkpages(
     let mut format_base_friends = vec![];
     let start_urls = &settings.LINK;
     for linkmeta in start_urls {
+        // check block url
+        let block_sites = &settings.BLOCK_SITE;
+        if check_block_site(block_sites, &linkmeta.link) {
+            continue;
+        };
         let download_linkpage_res = match crawler::crawl_link_page(
             &linkmeta.link,
             &linkmeta.theme,
