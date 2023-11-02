@@ -110,3 +110,9 @@ pub async fn delete_post_table(
     }
     Ok(())
 }
+
+pub async fn truncate_friend_table(pool: &MySqlPool) -> Result<(), Error> {
+    let sql = "TRUNCATE table friends";
+    query(sql).execute(pool).await?;
+    Ok(())
+}

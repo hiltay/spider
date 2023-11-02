@@ -104,6 +104,7 @@ async fn main() {
                     return;
                 }
             };
+            sqlite::truncate_friend_table(&dbpool).await.unwrap();
             for mut crawl_res in all_res {
                 if crawl_res.1.len() > 0 {
                     let posts = crawl_res.1.iter().map(|post| {
@@ -145,6 +146,7 @@ async fn main() {
                     return;
                 }
             };
+            mysql::truncate_friend_table(&dbpool).await.unwrap();
             for mut crawl_res in all_res {
                 if crawl_res.1.len() > 0 {
                     let posts = crawl_res.1.iter().map(|post| {
@@ -175,9 +177,40 @@ async fn main() {
         }
         "mongodb" => {
             let mongodburi = tools::load_mongodb_env().unwrap();
-            let client = mongodb::connect_mongodb_client(&mongodburi).await.unwrap();
+            let clientdb = mongodb::connect_mongodb_clientdb(&mongodburi)
+                .await
+                .unwrap();
+            mongodb::truncate_friend_table(&clientdb).await.unwrap();
+            for mut crawl_res in all_res {
+                if crawl_res.1.len() > 0 {
+                    let posts = crawl_res.1.iter().map(|post| {
+                        metadata::Posts::new(
+                            post.clone(),
+                            crawl_res.0.name.clone(),
+                            crawl_res.0.avatar.clone(),
+                            tools::strptime_to_string_ymdhms(now),
+                        )
+                    });
+                    mongodb::delete_post_table(posts.clone(), &clientdb)
+                        .await
+                        .unwrap();
+                    mongodb::bulk_insert_post_table(posts, &clientdb)
+                        .await
+                        .unwrap();
+                    mongodb::insert_friend_table(&crawl_res.0, &clientdb)
+                        .await
+                        .unwrap();
+                    success_friends.push(crawl_res.0);
+                    success_posts.push(crawl_res.1);
+                } else {
+                    crawl_res.0.error = true;
+                    mongodb::insert_friend_table(&crawl_res.0, &clientdb)
+                        .await
+                        .unwrap();
+                    failed_friends.push(crawl_res.0);
+                }
+            }
         }
-        // TODO mongodb
         _ => return,
     };
 

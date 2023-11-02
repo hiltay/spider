@@ -1,27 +1,70 @@
-use data_structures::metadata;
+use data_structures::metadata::{self, Friends, Posts};
 use futures::stream::TryStreamExt;
-use mongodb::{bson::doc, options::ClientOptions, options::FindOptions, Client};
+use mongodb::{
+    bson::{doc, Document},
+    options::ClientOptions,
+    options::FindOptions,
+    Client, Database,
+};
 
-pub async fn connect_mongodb_client(
+pub async fn connect_mongodb_clientdb(
     mongodburi: &str,
-) -> Result<Client, Box<dyn std::error::Error>> {
-    let client_options = ClientOptions::parse(mongodburi).await.unwrap();
-    let client = Client::with_options(client_options).unwrap();
-    Ok(client)
+) -> Result<Database, Box<dyn std::error::Error>> {
+    let client_options = ClientOptions::parse(mongodburi).await?;
+    let client = Client::with_options(client_options)?;
+    Ok(client.database("fcircle"))
 }
 
-// let db = client.database("fcircle");
-// for collection_name in db.list_collection_names(None).await.unwrap() {
-//     println!("{}", collection_name);
-// }
-// // Get a handle to a collection of `Book`.
-// let typed_collection = db.collection::<metadata::Posts>("Post");
-// // Query the books in the collection with a filter and an option.
-// let filter = doc! { "author": "贰猹的小窝" };
-// let find_options = FindOptions::builder().sort(doc! { "title": 1 }).build();
-// let mut cursor = typed_collection.find(filter, find_options).await.unwrap();
+pub async fn insert_post_table(
+    post: &Posts,
+    db: &Database,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let collection = db.collection::<Posts>("Posts");
+    collection.insert_one(post, None).await?;
+    Ok(())
+}
 
-// // Iterate over the results of the cursor.
-// while let Some(post) = cursor.try_next().await.unwrap() {
-//     println!("author: {:?}", post);
-// }
+pub async fn insert_friend_table(
+    friends: &Friends,
+    db: &Database,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let collection = db.collection::<Friends>("Friends");
+    collection.insert_one(friends, None).await?;
+    Ok(())
+}
+
+pub async fn bulk_insert_post_table(
+    tuples: impl Iterator<Item = metadata::Posts>,
+    db: &Database,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let collection = db.collection::<Posts>("Posts");
+    collection.insert_many(tuples, None).await?;
+    Ok(())
+}
+
+pub async fn bulk_insert_friend_table(
+    tuples: impl Iterator<Item = Friends>,
+    db: &Database,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let collection = db.collection::<Friends>("Friends");
+    collection.insert_many(tuples, None).await?;
+    Ok(())
+}
+
+pub async fn delete_post_table(
+    tuples: impl Iterator<Item = Posts>,
+    db: &Database,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let collection = db.collection::<Posts>("Posts");
+    for posts in tuples {
+        let filter = doc! { "link": posts.meta.link,"author":posts.author };
+        collection.delete_many(filter, None).await?;
+    }
+    Ok(())
+}
+
+pub async fn truncate_friend_table(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
+    let collection = db.collection::<Friends>("Friends");
+    collection.drop(None).await?;
+    Ok(())
+}
