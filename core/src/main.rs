@@ -2,7 +2,7 @@ use chrono::Utc;
 use data_structures::metadata::{self};
 use db::{mysql, sqlite};
 use downloader::download;
-use reqwest::ClientBuilder as CL;
+use reqwest::{ClientBuilder as CL, Proxy};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use sqlx;
@@ -16,13 +16,18 @@ fn build_client() -> ClientWithMiddleware {
     let baseclient = CL::new()
         .timeout(timeout)
         .use_rustls_tls()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .unwrap();
+        .danger_accept_invalid_certs(true);
+
+    let baseclient = match tools::load_proxy_env() {
+        Ok(proxy) => baseclient.proxy(Proxy::all(proxy).unwrap()),
+        Err(_) => baseclient,
+    };
+    let baseclient = baseclient.build().unwrap();
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     let client = ClientBuilder::new(baseclient)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
         .build();
+
     client
 }
 

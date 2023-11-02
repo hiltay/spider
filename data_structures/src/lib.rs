@@ -30,11 +30,11 @@ pub mod metadata {
             rule: String,
         ) -> BasePosts {
             BasePosts {
-                title: title,
-                created: created,
-                updated: updated,
-                link: link,
-                rule: rule,
+                title,
+                created,
+                updated,
+                link,
+                rule,
             }
         }
     }
@@ -42,10 +42,10 @@ pub mod metadata {
     impl Posts {
         pub fn new(meta: BasePosts, author: String, avatar: String, createAt: String) -> Posts {
             Posts {
-                meta: meta,
-                author: author,
-                avatar: avatar,
-                createAt: createAt,
+                meta,
+                author,
+                avatar,
+                createAt,
             }
         }
     }
@@ -68,11 +68,11 @@ pub mod metadata {
             createAt: String,
         ) -> Friends {
             Friends {
-                name: name,
-                link: link,
-                avatar: avatar,
-                error: error,
-                createAt: createAt,
+                name,
+                link,
+                avatar,
+                error,
+                createAt,
             }
         }
     }
@@ -97,8 +97,8 @@ pub mod config {
         pub LINK: Vec<LinkMeta>,
         pub SETTINGS_FRIENDS_LINKS: SettingsFriendsLinksMeta,
         pub BLOCK_SITE: Vec<String>,
-        pub MAX_POSTS_NUM: usize,
-        pub HTTP_PROXY: bool,
+        // pub MAX_POSTS_NUM: usize,
+        // pub HTTP_PROXY: bool,
         pub OUTDATE_CLEAN: usize,
         pub DATABASE: String,
         pub DEPLOY_TYPE: String,

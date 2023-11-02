@@ -44,27 +44,6 @@ SETTINGS_FRIENDS_LINKS: {
     ]
 }
 
-# # get links from gitee
-# # 从gitee issue中获取友链
-# GITEE_FRIENDS_LINKS: {
-#     enable: false, # true 开启gitee issue兼容
-#     type: "normal",  # volantis/stellar用户请在这里填写volantis
-#     owner:  "ccknbc",  # 填写你的gitee用户名
-#     repo:  "blogroll",  # 填写你的gitee仓库名
-#     state:  "open",  # 填写抓取的issue状态(open/closed)
-# }
-
-# # get links from github
-# # 从github issue中获取友链
-# GITHUB_FRIENDS_LINKS: {
-#     enable: false, # true 开启github issue兼容
-#     type: "normal",  # volantis/stellar用户请在这里填写volantis
-#     owner: "ccknbc",  # 填写你的github用户名
-#     repo: "ccknbc-actions",  # 填写你的github仓库名
-#     state: "open",  # 填写抓取的issue状态(open/closed)
-#     label: "active",  # 填写抓取的issue标签
-# }
-
 # block site list
 # 添加屏蔽站点，支持正则表达式
 BLOCK_SITE: [
@@ -73,12 +52,9 @@ BLOCK_SITE: [
 #    ^http://,  # http开头的全部屏蔽
 ]
 
-# 每个友链最多获取几篇文章，此值越大，则抓取的文章上限越多，相应地运行速度也会降低，反之亦然
-# 请设置一个正整数
-MAX_POSTS_NUM: 5
-
-# 启用HTTP代理，此项设为true，并且需要添加一个环境变量，名称为PROXY，值为[IP]:[端口]，比如：192.168.1.106:8080
-HTTP_PROXY: false
+# 如果要启用HTTP代理，需要添加一个环境变量，名称为PROXY，值为[IP]:[端口]或代理地址，比如：192.168.1.106:8080
+# 注意，如果本身设置了系统代理 (环境变量中设置了 `HTTP_PROXY`、`http_proxy`、`HTTPS_PROXY`、`https_proxy`) 则默认启用这些代理。
+# 如果使用此处的`PROXY`则会覆盖默认的系统代理
 
 # 过期文章清除（天）
 OUTDATE_CLEAN: 60

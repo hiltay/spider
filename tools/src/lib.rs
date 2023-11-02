@@ -50,8 +50,16 @@ pub fn get_yaml_settings(path: &str) -> io::Result<config::Settings> {
     }
 }
 
+/// 获取环境变量中的mysql连接
 pub fn load_mysql_conn_env() -> Result<String, Box<dyn std::error::Error>> {
     let r = dotenvy::dotenv()?;
     println!("{:?}",r);
     Ok(dotenvy::var("MYSQL_URI")?)
+}
+
+/// 获取环境变量中的代理配置
+pub fn load_proxy_env() -> Result<String, Box<dyn std::error::Error>> {
+    let r = dotenvy::dotenv()?;
+    println!("{:?}",r);
+    Ok(dotenvy::var("PROXY")?)
 }
