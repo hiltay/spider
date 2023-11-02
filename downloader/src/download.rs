@@ -5,11 +5,35 @@ use data_structures::{
     metadata::{self},
 };
 use regex::Regex;
-use reqwest_middleware::ClientWithMiddleware;
+use reqwest::{ClientBuilder as CL, Proxy};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use std::collections::HashMap;
+use std::time::Duration;
 use tokio::{self, task::JoinSet};
 use tools;
 use url::{ParseError, Url};
+
+/// 构建请求客户端
+pub fn build_client() -> ClientWithMiddleware {
+    let timeout = Duration::new(20, 0);
+    let baseclient = CL::new()
+        .timeout(timeout)
+        .use_rustls_tls()
+        .danger_accept_invalid_certs(true);
+
+    let baseclient = match tools::load_proxy_env() {
+        Ok(proxy) => baseclient.proxy(Proxy::all(proxy).unwrap()),
+        Err(_) => baseclient,
+    };
+    let baseclient = baseclient.build().unwrap();
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    let client = ClientBuilder::new(baseclient)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
+
+    client
+}
 
 /// 检查link页面解析结果的长度
 /// 如果字段`author`、`link`、`avatar`缺失，则返回0

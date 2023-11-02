@@ -9,16 +9,6 @@ use url::{ParseError, Url};
 // +08:00
 pub static BEIJING_OFFSET: Option<FixedOffset> = FixedOffset::east_opt(8 * 60 * 60);
 
-// trait BlockRequest {
-//     fn check_block_keys(self, block_list: Vec<String>) -> Self;
-// }
-
-// impl BlockRequest for RequestBuilder {
-//     fn check_block_keys(self, block_list: Vec<String>) -> Self {
-//         self
-//     }
-// }
-
 pub async fn crawl_link_page<'a>(
     url: &str,
     theme: &str,

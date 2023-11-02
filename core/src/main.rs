@@ -1,35 +1,10 @@
 use chrono::Utc;
 use data_structures::metadata::{self};
-use db::{mysql, sqlite};
+use db::{mongodb, mysql, sqlite};
 use downloader::download;
-use reqwest::{ClientBuilder as CL, Proxy};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use sqlx;
-use std::time::Duration;
 use tokio::{self};
 use tools;
-
-/// 构建请求客户端
-fn build_client() -> ClientWithMiddleware {
-    let timeout = Duration::new(20, 0);
-    let baseclient = CL::new()
-        .timeout(timeout)
-        .use_rustls_tls()
-        .danger_accept_invalid_certs(true);
-
-    let baseclient = match tools::load_proxy_env() {
-        Ok(proxy) => baseclient.proxy(Proxy::all(proxy).unwrap()),
-        Err(_) => baseclient,
-    };
-    let baseclient = baseclient.build().unwrap();
-    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    let client = ClientBuilder::new(baseclient)
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build();
-
-    client
-}
 
 #[tokio::main]
 async fn main() {
@@ -38,7 +13,7 @@ async fn main() {
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
     let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
 
-    let client = build_client();
+    let client = download::build_client();
 
     // let _cssrule = css_rules.clone();
     let format_base_friends =
@@ -197,6 +172,10 @@ async fn main() {
                     failed_friends.push(crawl_res.0);
                 }
             }
+        }
+        "mongodb" => {
+            let mongodburi = tools::load_mongodb_env().unwrap();
+            let client = mongodb::connect_mongodb_client(&mongodburi).await.unwrap();
         }
         // TODO mongodb
         _ => return,

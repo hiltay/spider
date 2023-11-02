@@ -10,7 +10,7 @@ pub async fn connect_mysql_dbpool(url: &str) -> Result<MySqlPool, Error> {
 
 pub async fn insert_post_table(post: &metadata::Posts, pool: &MySqlPool) -> Result<(), Error> {
     let sql = "INSERT INTO posts
-    (title, author, link, avatar ,rule,created,updated,createAt)
+    (title, author, link, avatar ,rule,created,updated,createdAt)
      VALUES (?, ?, ?,?, ?,?, ?, ?)";
     let q = query(sql)
         .bind(&post.meta.title)
@@ -20,7 +20,7 @@ pub async fn insert_post_table(post: &metadata::Posts, pool: &MySqlPool) -> Resu
         .bind(&post.meta.rule)
         .bind(&post.meta.created)
         .bind(&post.meta.updated)
-        .bind(&post.createAt);
+        .bind(&post.createdAt);
     // println!("sql: {},{:?}",q.sql(),q.take_arguments());
     q.execute(pool).await?;
     Ok(())
@@ -30,13 +30,13 @@ pub async fn insert_friend_table(
     friends: &metadata::Friends,
     pool: &MySqlPool,
 ) -> Result<(), Error> {
-    let sql = "INSERT INTO friends (name, link, avatar, error,createAt) VALUES (?, ?, ?, ?, ?)";
+    let sql = "INSERT INTO friends (name, link, avatar, error,createdAt) VALUES (?, ?, ?, ?, ?)";
     let q = query(sql)
         .bind(&friends.name)
         .bind(&friends.link)
         .bind(&friends.avatar)
         .bind(&friends.error)
-        .bind(&friends.createAt);
+        .bind(&friends.createdAt);
     // println!("sql: {},{:?}",q.sql(),q.take_arguments());
     q.execute(pool).await?;
     Ok(())
@@ -50,7 +50,7 @@ pub async fn bulk_insert_post_table(
         // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
         // spaces as that might interfere with identifiers or quoted strings where exact
         // values may matter.
-        "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createAt) ",
+        "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createdAt) ",
     );
 
     query_builder.push_values(tuples, |mut b, post| {
@@ -64,7 +64,7 @@ pub async fn bulk_insert_post_table(
             .push_bind(post.meta.rule)
             .push_bind(post.meta.created)
             .push_bind(post.meta.updated)
-            .push_bind(post.createAt);
+            .push_bind(post.createdAt);
     });
     let query = query_builder.build();
     query.execute(pool).await?;
@@ -79,7 +79,7 @@ pub async fn bulk_insert_friend_table(
         // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
         // spaces as that might interfere with identifiers or quoted strings where exact
         // values may matter.
-        "INSERT INTO friends (name, link, avatar, error,createAt) ",
+        "INSERT INTO friends (name, link, avatar, error,createdAt) ",
     );
 
     query_builder.push_values(tuples, |mut b, friends| {
@@ -89,7 +89,7 @@ pub async fn bulk_insert_friend_table(
         b.push_bind(friends.name)
             .push_bind(friends.link)
             .push_bind(friends.avatar)
-            .push_bind(friends.createAt);
+            .push_bind(friends.createdAt);
     });
     let query = query_builder.build();
     query.execute(pool).await?;

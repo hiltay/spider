@@ -18,7 +18,7 @@ pub mod metadata {
         pub meta: BasePosts,
         pub author: String,
         pub avatar: String,
-        pub createAt: String,
+        pub createdAt: String,
     }
 
     impl BasePosts {
@@ -40,12 +40,12 @@ pub mod metadata {
     }
 
     impl Posts {
-        pub fn new(meta: BasePosts, author: String, avatar: String, createAt: String) -> Posts {
+        pub fn new(meta: BasePosts, author: String, avatar: String, createdAt: String) -> Posts {
             Posts {
                 meta,
                 author,
                 avatar,
-                createAt,
+                createdAt,
             }
         }
     }
@@ -56,7 +56,7 @@ pub mod metadata {
         pub link: String,
         pub avatar: String,
         pub error: bool,
-        pub createAt: String,
+        pub createdAt: String,
     }
 
     impl Friends {
@@ -65,14 +65,14 @@ pub mod metadata {
             link: String,
             avatar: String,
             error: bool,
-            createAt: String,
+            createdAt: String,
         ) -> Friends {
             Friends {
                 name,
                 link,
                 avatar,
                 error,
-                createAt,
+                createdAt,
             }
         }
     }

@@ -52,14 +52,18 @@ pub fn get_yaml_settings(path: &str) -> io::Result<config::Settings> {
 
 /// 获取环境变量中的mysql连接
 pub fn load_mysql_conn_env() -> Result<String, Box<dyn std::error::Error>> {
-    let r = dotenvy::dotenv()?;
-    println!("{:?}",r);
+    dotenvy::dotenv()?;
     Ok(dotenvy::var("MYSQL_URI")?)
 }
 
 /// 获取环境变量中的代理配置
 pub fn load_proxy_env() -> Result<String, Box<dyn std::error::Error>> {
-    let r = dotenvy::dotenv()?;
-    println!("{:?}",r);
+    dotenvy::dotenv()?;
     Ok(dotenvy::var("PROXY")?)
+}
+
+/// 获取环境变量中的MongoDB连接配置
+pub fn load_mongodb_env() -> Result<String, Box<dyn std::error::Error>> {
+    dotenvy::dotenv()?;
+    Ok(dotenvy::var("MONGODB_URI")?)
 }
