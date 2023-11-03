@@ -3,5 +3,6 @@
 /core/target
 /data_structures/target
 /tools/target
+/db/target
 data.db
 .DS_Store
