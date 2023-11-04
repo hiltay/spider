@@ -1,10 +1,12 @@
 [package]
-name = "data_structures"
+name = "api"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde.workspace = true
-sqlx.workspace = true
+axum.workspace = true
+tokio.workspace = true
+api_dependence = { path = "../api_dependence" }
+db = { path = "../db" }

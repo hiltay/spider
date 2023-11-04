@@ -1,9 +1,10 @@
 /// 包含基本数据结构定义
 pub mod metadata {
     use serde::{Deserialize, Serialize};
+    use sqlx::FromRow;
 
     /// 文章结构定义
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
     pub struct BasePosts {
         pub title: String,
         pub created: String,
@@ -12,8 +13,9 @@ pub mod metadata {
         pub rule: String,
     }
 
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
     pub struct Posts {
+        #[sqlx(flatten)]
         #[serde(flatten)]
         pub meta: BasePosts,
         pub author: String,
@@ -50,7 +52,7 @@ pub mod metadata {
         }
     }
 
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
     pub struct Friends {
         pub name: String,
         pub link: String,
@@ -78,6 +80,7 @@ pub mod metadata {
     }
 }
 
+/// 配置
 pub mod config {
     use serde::{Deserialize, Serialize};
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -105,17 +108,115 @@ pub mod config {
     }
 }
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+/// 响应
+pub mod response {
+    use super::metadata::*;
+    use serde::{Deserialize, Serialize};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    /// 统计数据
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct StatisticalData {
+        friends_num: usize,
+        active_num: usize,
+        error_num: usize,
+        article_num: usize,
+        last_updated_time: String,
+    }
+    impl StatisticalData {
+        fn new(
+            friends_num: usize,
+            active_num: usize,
+            error_num: usize,
+            article_num: usize,
+            last_updated_time: String,
+        ) -> Self {
+            StatisticalData {
+                friends_num,
+                active_num,
+                error_num,
+                article_num,
+                last_updated_time,
+            }
+        }
+    }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    /// 文章数据
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct ArticleData {
+        // 排序
+        floor: usize,
+        title: String,
+        created: String,
+        updated: String,
+        link: String,
+        author: String,
+        avatar: String,
+    }
+
+    impl ArticleData {
+        fn new(
+            floor: usize,
+            title: String,
+            created: String,
+            updated: String,
+            link: String,
+            author: String,
+            avatar: String,
+        ) -> Self {
+            ArticleData {
+                floor,
+                title,
+                created,
+                updated,
+                link,
+                author,
+                avatar,
+            }
+        }
+    }
+
+    /// 所有文章数据
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct AllPostData {
+        pub statistical_data: StatisticalData,
+        pub article_data: Vec<ArticleData>,
+    }
+
+    impl AllPostData {
+        pub fn new(
+            friends_num: usize,
+            active_num: usize,
+            error_num: usize,
+            article_num: usize,
+            last_updated_time: String,
+            posts: Vec<Posts>,
+            start_offset: usize, // 用于计算floor
+        ) -> AllPostData {
+            let article_data: Vec<ArticleData> = posts
+                .into_iter()
+                .enumerate()
+                .map(|(floor, posts)| {
+                    ArticleData::new(
+                        floor + start_offset + 1,
+                        posts.meta.title,
+                        posts.meta.created,
+                        posts.meta.updated,
+                        posts.meta.link,
+                        posts.author,
+                        posts.avatar,
+                    )
+                })
+                .collect();
+            AllPostData {
+                statistical_data: StatisticalData::new(
+                    friends_num,
+                    active_num,
+                    error_num,
+                    article_num,
+                    last_updated_time,
+                ),
+                article_data,
+            }
+        }
     }
 }
