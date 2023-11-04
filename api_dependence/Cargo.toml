@@ -10,3 +10,4 @@ axum.workspace = true
 db = { path = "../db" }
 data_structures = { path = "../data_structures" }
 serde.workspace = true
+serde_json.workspace = true

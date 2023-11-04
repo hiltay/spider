@@ -1,3 +1,4 @@
+use crate::format_response::PYQError;
 use axum::{
     extract::{Query, State},
     Json,
@@ -18,19 +19,28 @@ pub struct AllQueryParams {
 pub async fn get_all(
     State(pool): State<SqlitePool>,
     Query(params): Query<AllQueryParams>,
-) -> Json<AllPostData> {
-    println!("{:?}", params);
-    let posts = sqlite::select_all_from_posts(
+) -> Result<Json<AllPostData>, PYQError> {
+    let posts = match sqlite::select_all_from_posts(
         &pool,
         params.start.unwrap_or(0),
         params.end.unwrap_or(0),
         &params.sort_rule.unwrap_or(String::from("updated")),
     )
     .await
-    .expect("查询`posts`表失败，请检查：1、请求参数是否正确？2、数据库是否可以连接？3、posts表是否有数据？4、字段格式是否正确？");
-    let last_updated_time = sqlite::select_latest_time_from_posts(&pool).await.expect("查询上次更新时间失败。请检查：请检查：1、请求参数是否正确？2、数据库是否可以连接？3、posts表是否有数据？4、字段格式是否正确？");
+    {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
 
-    let friends = sqlite::select_all_from_friends(&pool).await.expect("查询`friends`表失败，请检查：1、请求参数是否正确？2、数据库是否可以连接？3、friends表是否有数据？4、字段格式是否正确？");
+    let last_updated_time = match sqlite::select_latest_time_from_posts(&pool).await {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
+
+    let friends = match sqlite::select_all_from_friends(&pool).await {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
     let friends_num = friends.len();
     let mut active_num = 0;
     let mut lost_num = 0;
@@ -50,5 +60,5 @@ pub async fn get_all(
         posts,
         params.start.unwrap_or(0),
     );
-    Json(data)
+    Ok(Json(data))
 }

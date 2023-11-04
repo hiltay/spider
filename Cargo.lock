@@ -84,6 +84,7 @@ dependencies = [
  "data_structures",
  "db",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

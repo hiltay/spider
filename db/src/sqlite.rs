@@ -139,7 +139,7 @@ pub async fn select_all_from_posts(
 ) -> Result<Vec<metadata::Posts>, Error> {
     let sql;
     if start == 0 && end == 0 {
-        sql = String::from("SELECT * FROM posts")
+        sql = format!("SELECT * FROM posts ORDER BY {sort_rule} DESC");
     } else {
         sql = format!(
             "
