@@ -7,7 +7,7 @@ CREATE TABLE `posts` (
   `author` varchar(256) DEFAULT NULL,
   `avatar` varchar(1024) DEFAULT NULL,
   `rule` varchar(256) DEFAULT NULL,
-  `createdAt` datetime DEFAULT NULL,
+  `createdAt` VARCHAR(1024) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=125 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -17,7 +17,7 @@ CREATE TABLE `friends` (
   `link` varchar(1024) DEFAULT NULL,
   `avatar` varchar(1024) DEFAULT NULL,
   `error` tinyint(1) DEFAULT NULL,
-  `createdAt` datetime DEFAULT NULL,
+  `createdAt` VARCHAR(1024) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

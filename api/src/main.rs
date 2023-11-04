@@ -1,13 +1,29 @@
-use api_dependence::sqlite::sqliteapi;
+use api_dependence::{mysql::mysqlapi, sqlite::sqliteapi};
+
 use axum::{routing::get, Router};
-use db::sqlite;
+use db::{mysql, sqlite};
 #[tokio::main]
 async fn main() {
-    let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
-
-    let app = Router::new()
-        .route("/all", get(sqliteapi::get_all))
-        .with_state(dbpool);
+    let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
+    let app;
+    match fc_settings.DATABASE.as_str() {
+        "sqlite" => {
+            let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
+            app = Router::new()
+                .route("/all", get(sqliteapi::get_all))
+                .with_state(dbpool);
+        }
+        "mysql" => {
+            // get mysql conn pool
+            let mysqlconnstr = tools::load_mysql_conn_env().unwrap();
+            let dbpool = mysql::connect_mysql_dbpool(&mysqlconnstr).await.unwrap();
+            app = Router::new()
+                .route("/all", get(mysqlapi::get_all))
+                .with_state(dbpool);
+        }
+        // "mongodb" => {}
+        _ => return,
+    }
 
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
         .serve(app.into_make_service())

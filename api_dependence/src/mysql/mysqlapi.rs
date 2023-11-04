@@ -4,7 +4,7 @@ use axum::{
     Json,
 };
 use data_structures::response::AllPostData;
-use db::{sqlite, SqlitePool};
+use db::{mysql, MySqlPool};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -17,11 +17,11 @@ pub struct AllQueryParams {
 }
 
 pub async fn get_all(
-    State(pool): State<SqlitePool>,
+    State(pool): State<MySqlPool>,
     Query(params): Query<AllQueryParams>,
 ) -> Result<Json<AllPostData>, PYQError> {
     // println!("{:?}",params);
-    let posts = match sqlite::select_all_from_posts(
+    let posts = match mysql::select_all_from_posts(
         &pool,
         params.start.unwrap_or(0),
         params.end.unwrap_or(0),
@@ -33,12 +33,12 @@ pub async fn get_all(
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
 
-    let last_updated_time = match sqlite::select_latest_time_from_posts(&pool).await {
+    let last_updated_time = match mysql::select_latest_time_from_posts(&pool).await {
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
 
-    let friends = match sqlite::select_all_from_friends(&pool).await {
+    let friends = match mysql::select_all_from_friends(&pool).await {
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };

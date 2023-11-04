@@ -150,6 +150,7 @@ pub async fn select_all_from_posts(
             limit = end - start
         );
     }
+    // println!("{}",sql);
     let posts = query_as::<_, metadata::Posts>(&sql).fetch_all(pool).await?;
     Ok(posts)
 }

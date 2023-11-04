@@ -1,5 +1,7 @@
 use data_structures::metadata;
-use sqlx::{mysql::MySqlPool, mysql::MySqlPoolOptions, query, Error, MySql, QueryBuilder};
+use sqlx::{
+    mysql::MySqlPool, mysql::MySqlPoolOptions, query, query_as, Error, MySql, QueryBuilder, Row,
+};
 
 pub async fn connect_mysql_dbpool(url: &str) -> Result<MySqlPool, Error> {
     MySqlPoolOptions::new()
@@ -115,4 +117,51 @@ pub async fn truncate_friend_table(pool: &MySqlPool) -> Result<(), Error> {
     let sql = "TRUNCATE table friends";
     query(sql).execute(pool).await?;
     Ok(())
+}
+
+/// 查询`posts`表
+///
+/// 按照`sort_rule`排序；
+///
+/// 如果`start`和`end`同时为0，则查询全部；
+///
+/// 否则只查询`start-end`条数据，如果`start>end`，会报错
+pub async fn select_all_from_posts(
+    pool: &MySqlPool,
+    start: usize,
+    end: usize,
+    sort_rule: &str,
+) -> Result<Vec<metadata::Posts>, Error> {
+    let sql;
+    if start == 0 && end == 0 {
+        sql = format!("SELECT * FROM posts ORDER BY {sort_rule} DESC");
+    } else {
+        sql = format!(
+            "
+        SELECT * FROM posts
+        ORDER BY {sort_rule} DESC
+        LIMIT {limit} OFFSET {start}
+        ",
+            limit = end - start
+        );
+    }
+    // println!("{}",sql);
+    let posts = query_as::<_, metadata::Posts>(&sql).fetch_all(pool).await?;
+    Ok(posts)
+}
+
+pub async fn select_latest_time_from_posts(pool: &MySqlPool) -> Result<String, Error> {
+    let sql = "SELECT createdAt from posts ORDER BY createdAt DESC";
+    let result = query(sql).fetch_one(pool).await?;
+    let created_at: String = result.get("createdAt");
+    Ok(created_at)
+}
+
+/// 查询`friends`表的所有数据
+pub async fn select_all_from_friends(pool: &MySqlPool) -> Result<Vec<metadata::Friends>, Error> {
+    let sql = String::from("SELECT * FROM friends");
+    let friends = query_as::<_, metadata::Friends>(&sql)
+        .fetch_all(pool)
+        .await?;
+    Ok(friends)
 }

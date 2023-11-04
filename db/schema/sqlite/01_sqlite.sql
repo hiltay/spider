@@ -4,7 +4,7 @@ CREATE TABLE friends (
 	link VARCHAR(1024), 
 	avatar VARCHAR(1024), 
 	error BOOLEAN, 
-	"createdAt" DATETIME, 
+	"createdAt" VARCHAR(1024), 
 	PRIMARY KEY (id)
 );
 
@@ -17,7 +17,7 @@ CREATE TABLE posts (
 	author VARCHAR(256), 
 	avatar VARCHAR(1024), 
 	rule VARCHAR(256), 
-	"createdAt" DATETIME, 
+	"createdAt" VARCHAR(1024), 
 	PRIMARY KEY (id)
 );
 
