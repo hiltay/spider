@@ -11,6 +11,7 @@ async fn main() {
             let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
             app = Router::new()
                 .route("/all", get(sqliteapi::get_all))
+                .route("/friend", get(sqliteapi::get_friend))
                 .with_state(dbpool);
         }
         "mysql" => {
@@ -19,6 +20,7 @@ async fn main() {
             let dbpool = mysql::connect_mysql_dbpool(&mysqlconnstr).await.unwrap();
             app = Router::new()
                 .route("/all", get(mysqlapi::get_all))
+                .route("/friend", get(mysqlapi::get_friend))
                 .with_state(dbpool);
         }
         // "mongodb" => {}

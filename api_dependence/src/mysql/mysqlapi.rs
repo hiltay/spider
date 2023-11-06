@@ -3,7 +3,7 @@ use axum::{
     extract::{Query, State},
     Json,
 };
-use data_structures::response::AllPostData;
+use data_structures::{metadata::Friends, response::AllPostData};
 use db::{mysql, MySqlPool};
 use serde::Deserialize;
 
@@ -62,4 +62,13 @@ pub async fn get_all(
         params.start.unwrap_or(0),
     );
     Ok(Json(data))
+}
+
+pub async fn get_friend(State(pool): State<MySqlPool>) -> Result<Json<Vec<Friends>>, PYQError> {
+    let friends = match mysql::select_all_from_friends(&pool).await {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
+
+    Ok(Json(friends))
 }

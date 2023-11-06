@@ -57,7 +57,9 @@ pub mod metadata {
         pub name: String,
         pub link: String,
         pub avatar: String,
+        #[serde(skip_serializing)]
         pub error: bool,
+        #[serde(skip_serializing)]
         pub createdAt: String,
     }
 
