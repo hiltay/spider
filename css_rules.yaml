@@ -1,37 +1,6 @@
 # 主页规则
 post_page_rules:
   {
-    butterfly:
-      {
-        title:
-          [
-            {
-              selector: "#recent-posts .recent-post-info a:first-child",
-              attr: "text",
-            },
-          ],
-        link:
-          [
-            {
-              selector: "#recent-posts .recent-post-info a:first-child",
-              attr: "href",
-            },
-          ],
-        created:
-          [
-            {
-              selector: "#recent-posts .recent-post-info .post-meta-date time:first-of-type",
-              attr: "text",
-            },
-          ],
-        updated:
-          [
-            {
-              selector: "#recent-posts .recent-post-info .post-meta-date time:nth-of-type(2)",
-              attr: "text",
-            },
-          ],
-      },
     anzhiyu:
       {
         title:
@@ -52,6 +21,37 @@ post_page_rules:
           [
             {
               selector: "#recent-posts > div.recent-post-item.lastestpost-item > div.recent-post-info > div.article-meta-wrap > span.post-meta-date > time",
+              attr: "time",
+            },
+          ],
+        updated:
+          [
+            {
+              selector: "#recent-posts .recent-post-info .post-meta-date time:nth-of-type(2)",
+              attr: "time",
+            },
+          ],
+      },
+    butterfly:
+      {
+        title:
+          [
+            {
+              selector: "#recent-posts .recent-post-info a:first-child",
+              attr: "text",
+            },
+          ],
+        link:
+          [
+            {
+              selector: "#recent-posts .recent-post-info a:first-child",
+              attr: "href",
+            },
+          ],
+        created:
+          [
+            {
+              selector: "#recent-posts .recent-post-info .post-meta-date time:first-of-type",
               attr: "text",
             },
           ],
