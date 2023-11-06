@@ -3,8 +3,12 @@ use axum::{
     extract::{Query, State},
     Json,
 };
-use data_structures::{metadata::Friends, response::AllPostData};
+use data_structures::{
+    metadata::{Friends, Posts},
+    response::AllPostData,
+};
 use db::{mysql, MySqlPool};
+use rand::seq::SliceRandom;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -71,4 +75,42 @@ pub async fn get_friend(State(pool): State<MySqlPool>) -> Result<Json<Vec<Friend
     };
 
     Ok(Json(friends))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RandomQueryParams {
+    #[serde(default)]
+    num: Option<usize>,
+}
+pub async fn get_randomfriend(
+    State(pool): State<MySqlPool>,
+    Query(params): Query<RandomQueryParams>,
+) -> Result<Json<Vec<Friends>>, PYQError> {
+    let friends = match mysql::select_all_from_friends(&pool).await {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
+    // println!("{:?}",params);
+    let rng = &mut rand::thread_rng();
+    let result: Vec<Friends> = friends
+        .choose_multiple(rng, params.num.unwrap_or(1))
+        .cloned()
+        .collect();
+    Ok(Json(result))
+}
+
+pub async fn get_randompost(
+    State(pool): State<MySqlPool>,
+    Query(params): Query<RandomQueryParams>,
+) -> Result<Json<Vec<Posts>>, PYQError> {
+    let posts = match mysql::select_all_from_posts(&pool, 0, 0, "updated").await {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
+    let rng = &mut rand::thread_rng();
+    let result: Vec<Posts> = posts
+        .choose_multiple(rng, params.num.unwrap_or(1))
+        .cloned()
+        .collect();
+    Ok(Json(result))
 }

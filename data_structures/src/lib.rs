@@ -10,6 +10,7 @@ pub mod metadata {
         pub created: String,
         pub updated: String,
         pub link: String,
+        #[serde(skip_serializing)]
         pub rule: String,
     }
 
@@ -20,6 +21,7 @@ pub mod metadata {
         pub meta: BasePosts,
         pub author: String,
         pub avatar: String,
+        #[serde(skip_serializing)]
         pub createdAt: String,
     }
 
