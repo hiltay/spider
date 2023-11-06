@@ -12,6 +12,7 @@ async fn main() {
             app = Router::new()
                 .route("/all", get(sqliteapi::get_all))
                 .route("/friend", get(sqliteapi::get_friend))
+                .route("/post", get(sqliteapi::get_post))
                 .route("/randomfriend", get(sqliteapi::get_randomfriend))
                 .route("/randompost", get(sqliteapi::get_randompost))
                 .with_state(dbpool);
@@ -23,6 +24,7 @@ async fn main() {
             app = Router::new()
                 .route("/all", get(mysqlapi::get_all))
                 .route("/friend", get(mysqlapi::get_friend))
+                .route("/post", get(mysqlapi::get_post))
                 .route("/randomfriend", get(mysqlapi::get_randomfriend))
                 .route("/randompost", get(mysqlapi::get_randompost))
                 .with_state(dbpool);

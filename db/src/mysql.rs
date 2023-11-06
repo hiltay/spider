@@ -149,7 +149,46 @@ pub async fn select_all_from_posts(
     let posts = query_as::<_, metadata::Posts>(&sql).fetch_all(pool).await?;
     Ok(posts)
 }
+/// 查询`posts`表中`link`包含`domain_str`的数据
+///
+/// 当num<0时，返回所有数据
+pub async fn select_all_from_posts_with_linklike(
+    pool: &MySqlPool,
+    link: &str,
+    num: i32,
+    sort_rule: &str,
+) -> Result<Vec<metadata::Posts>, Error> {
+    let sql = if num >= 0 {
+        format!(
+            "SELECT * FROM posts WHERE link like '%{}%' ORDER BY {} DESC LIMIT {}",
+            link, sort_rule, num
+        )
+    } else {
+        format!(
+            "SELECT * FROM posts WHERE link like '%{}%' ORDER BY {} DESC",
+            link, sort_rule,
+        )
+    };
+    // println!("{}",sql);
+    let posts = query_as::<_, metadata::Posts>(&sql).fetch_all(pool).await?;
+    Ok(posts)
+}
 
+/// 查询`friends`表中`link`包含`domain_str`的一条数据
+pub async fn select_one_from_friends_with_linklike(
+    pool: &MySqlPool,
+    domain_str: &str,
+) -> Result<metadata::Friends, Error> {
+    let sql = format!("SELECT * from friends WHERE link like '%{}%'", domain_str);
+    // println!("{}", sql);
+
+    let friend = query_as::<_, metadata::Friends>(&sql)
+        .fetch_one(pool)
+        .await?;
+    Ok(friend)
+}
+
+/// 获取`posts`表中最近一次更新（`createdAt`最新）的时间
 pub async fn select_latest_time_from_posts(pool: &MySqlPool) -> Result<String, Error> {
     let sql = "SELECT createdAt from posts ORDER BY createdAt DESC";
     let result = query(sql).fetch_one(pool).await?;

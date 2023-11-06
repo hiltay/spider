@@ -12,3 +12,4 @@ data_structures = { path = "../data_structures" }
 serde.workspace = true
 serde_json.workspace = true
 rand = "0.8"
+url.workspace = true

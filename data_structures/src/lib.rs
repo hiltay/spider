@@ -223,4 +223,66 @@ pub mod response {
             }
         }
     }
+
+    /// 某个friend的统计数据
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct StatisticalDataOfSomeFriend {
+        name: String,
+        link: String,
+        avatar: String,
+        article_num: usize,
+    }
+    impl StatisticalDataOfSomeFriend {
+        pub fn new(name: String, link: String, avatar: String, article_num: usize) -> Self {
+            StatisticalDataOfSomeFriend {
+                name,
+                link,
+                avatar,
+                article_num,
+            }
+        }
+    }
+
+    /// 某个friend的所有文章数据
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct AllPostDataSomeFriend {
+        pub statistical_data: StatisticalDataOfSomeFriend,
+        pub article_data: Vec<ArticleData>,
+    }
+
+    impl AllPostDataSomeFriend {
+        pub fn new(
+            name: String,
+            link: String,
+            avatar: String,
+            article_num: usize,
+            posts: Vec<Posts>,
+            start_offset: usize, // 用于计算floor
+        ) -> AllPostDataSomeFriend {
+            let article_data: Vec<ArticleData> = posts
+                .into_iter()
+                .enumerate()
+                .map(|(floor, posts)| {
+                    ArticleData::new(
+                        floor + start_offset + 1,
+                        posts.meta.title,
+                        posts.meta.created,
+                        posts.meta.updated,
+                        posts.meta.link,
+                        posts.author,
+                        posts.avatar,
+                    )
+                })
+                .collect();
+            AllPostDataSomeFriend {
+                statistical_data: StatisticalDataOfSomeFriend::new(
+                    name,
+                    link,
+                    avatar,
+                    article_num,
+                ),
+                article_data,
+            }
+        }
+    }
 }

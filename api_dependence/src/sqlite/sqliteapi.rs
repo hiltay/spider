@@ -5,11 +5,12 @@ use axum::{
 };
 use data_structures::{
     metadata::{Friends, Posts},
-    response::AllPostData,
+    response::{AllPostData, AllPostDataSomeFriend},
 };
 use db::{sqlite, SqlitePool};
 use rand::seq::SliceRandom;
 use serde::Deserialize;
+use url::Url;
 #[derive(Debug, Deserialize)]
 pub struct AllQueryParams {
     start: Option<usize>,
@@ -74,10 +75,76 @@ pub async fn get_friend(State(pool): State<SqlitePool>) -> Result<Json<Vec<Frien
 
     Ok(Json(friends))
 }
+#[derive(Debug, Deserialize)]
+pub struct PostParams {
+    link: Option<String>,
+    num: Option<i32>,
+    #[serde(rename(deserialize = "rule"))]
+    sort_rule: Option<String>,
+}
+
+pub async fn get_post(
+    State(pool): State<SqlitePool>,
+    Query(params): Query<PostParams>,
+) -> Result<Json<AllPostDataSomeFriend>, PYQError> {
+    let friend = match params.link {
+        Some(link) => {
+            let domain_str = match Url::parse(&link) {
+                Ok(v) => match v.host_str() {
+                    Some(host) => host.to_string(),
+                    None => return Err(PYQError::QueryParamsError(String::from("无法解析出host"))),
+                },
+                Err(e) => return Err(PYQError::QueryParamsError(e.to_string())),
+            };
+            // println!("{}", domain_str);
+
+            match sqlite::select_one_from_friends_with_linklike(&pool, &domain_str).await {
+                Ok(v) => v,
+                Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+            }
+        }
+        None => {
+            /// 没有提供link，则随机获取一个friend
+            let friends = match sqlite::select_all_from_friends(&pool).await {
+                Ok(v) => v,
+                Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+            };
+            let rng = &mut rand::thread_rng();
+            let friend = match friends.choose(rng).cloned() {
+                Some(f) => f,
+                None => {
+                    return Err(PYQError::QueryDataBaseError(String::from(
+                        "friends表数据为空",
+                    )))
+                }
+            };
+            friend
+        }
+    };
+    let posts = match sqlite::select_all_from_posts_with_linklike(
+        &pool,
+        &friend.link,
+        params.num.unwrap_or(-1),
+        &params.sort_rule.unwrap_or(String::from("created")),
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
+    let data = AllPostDataSomeFriend::new(
+        friend.name,
+        friend.link,
+        friend.avatar,
+        posts.len(),
+        posts,
+        0,
+    );
+    Ok(Json(data))
+}
 
 #[derive(Debug, Deserialize)]
 pub struct RandomQueryParams {
-    #[serde(default)]
     num: Option<usize>,
 }
 
