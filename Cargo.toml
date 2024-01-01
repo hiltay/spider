@@ -29,4 +29,4 @@ sqlx = { version = "0.7", features = [
     "chrono",
 ] }
 url = "2.4"
-axum = "0.6"
+axum = "0.7"

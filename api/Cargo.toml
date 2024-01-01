@@ -11,5 +11,5 @@ tokio.workspace = true
 api_dependence = { path = "../api_dependence" }
 db = { path = "../db" }
 tools = { path = "../tools" }
-tower-http = {version = "0.4",features = ["cors"]}
+tower-http = {version = "0.5",features = ["cors"]}
 tower = "0.4"
