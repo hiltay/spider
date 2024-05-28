@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 axum.workspace = true
 tokio.workspace = true
+jsonwebtoken.workspace = true
 api_dependence = { path = "../api_dependence" }
 db = { path = "../db" }
 tools = { path = "../tools" }

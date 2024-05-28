@@ -1,14 +1,25 @@
 use crate::format_response::PYQError;
+use crate::secure::{
+    create_password_hash, generate_new_token, generate_secret_key, verify_password, AuthBody,
+    AuthError, AuthPayload, Claims, Keys,
+};
 use axum::{
     extract::{Query, State},
     Json,
 };
+use chrono::{Local, TimeDelta};
+use data_structures::metadata;
 use data_structures::{
     metadata::{Friends, Posts},
     response::{AllPostData, AllPostDataSomeFriend},
 };
 use db::{sqlite, SqlitePool};
-use rand::seq::SliceRandom;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use rand::{
+    distributions::{Alphanumeric, DistString},
+    seq::SliceRandom,
+    thread_rng, Rng,
+};
 use serde::Deserialize;
 use url::Url;
 #[derive(Debug, Deserialize)]
@@ -104,7 +115,7 @@ pub async fn get_post(
             }
         }
         None => {
-            /// 没有提供link，则随机获取一个friend
+            // 没有提供link，则随机获取一个friend
             let friends = match sqlite::select_all_from_friends(&pool).await {
                 Ok(v) => v,
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
@@ -179,4 +190,54 @@ pub async fn get_randompost(
         .cloned()
         .collect();
     Ok(Json(result))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LoginTokenQueryParams {
+    token: String,
+}
+pub async fn login(
+    State(pool): State<SqlitePool>,
+    Json(params): Json<LoginTokenQueryParams>,
+) -> Result<Json<AuthBody>, AuthError> {
+    // Create the authorization token
+    let token = generate_new_token(&params.token)?;
+
+    Ok(Json(AuthBody::new(token)))
+}
+
+/// 尝试从数据库获取secret_key，如果没有则随机生成一个并保存；
+async fn get_secret_key(pool: &SqlitePool) -> Result<String, PYQError> {
+    let secrets = match sqlite::select_all_from_secret(pool).await {
+        Ok(v) => v,
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+    };
+    if secrets.len() != 1 {
+        // 先清空数据库表再重新生成
+        if let Err(e) = sqlite::truncate_table(pool, "secret").await {
+            return Err(PYQError::QueryDataBaseError(e.to_string()));
+        };
+        let secret_key = generate_secret_key();
+
+        if let Err(e) =
+            sqlite::insert_secret_table(&metadata::Secret::new(secret_key.clone()), pool).await
+        {
+            return Err(PYQError::InsertDataBaseError(e.to_string()));
+        };
+        Ok(secret_key)
+    } else {
+        let secret = secrets.first().unwrap();
+        Ok(secret.secret_key.to_owned())
+    }
+}
+
+pub async fn login_with_token(
+    State(pool): State<SqlitePool>,
+    claims: Claims,
+) -> Result<String, PYQError> {
+    // 获取secret_key
+    let secret_key = get_secret_key(&pool).await?;
+
+    
+    Ok(secret_key)
 }

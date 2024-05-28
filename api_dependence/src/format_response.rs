@@ -5,6 +5,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 pub enum PYQError {
     QueryDataBaseError(String),
+    InsertDataBaseError(String),
     QueryParamsError(String),
 }
 
@@ -33,6 +34,12 @@ impl IntoResponse for PYQError {
             PYQError::QueryParamsError(e)=>{
                 serde_json::to_string(&ErrorResponse::new(&format!(
                     "请求参数错误. Error: {e}"
+                )))
+                .unwrap()
+            },
+            PYQError::InsertDataBaseError(e)=>{
+                serde_json::to_string(&ErrorResponse::new(&format!(
+                    "插入数据库错误. Error: {e}"
                 )))
                 .unwrap()
             }

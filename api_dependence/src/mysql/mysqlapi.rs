@@ -1,4 +1,5 @@
 use crate::format_response::PYQError;
+use crate::secure;
 use axum::{
     extract::{Query, State},
     Json,
@@ -107,7 +108,7 @@ pub async fn get_post(
             }
         }
         None => {
-            /// 没有提供link，则随机获取一个friend
+            // 没有提供link，则随机获取一个friend
             let friends = match mysql::select_all_from_friends(&pool).await {
                 Ok(v) => v,
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),

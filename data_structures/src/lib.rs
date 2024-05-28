@@ -82,6 +82,17 @@ pub mod metadata {
             }
         }
     }
+
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
+    pub struct Secret {
+        pub secret_key: String,
+    }
+
+    impl Secret {
+        pub fn new(secret_key: String) -> Secret {
+            Secret { secret_key }
+        }
+    }
 }
 
 /// 配置
@@ -275,12 +286,7 @@ pub mod response {
                 })
                 .collect();
             AllPostDataSomeFriend {
-                statistical_data: StatisticalDataOfSomeFriend::new(
-                    name,
-                    link,
-                    avatar,
-                    article_num,
-                ),
+                statistical_data: StatisticalDataOfSomeFriend::new(name, link, avatar, article_num),
                 article_data,
             }
         }

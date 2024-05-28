@@ -1,5 +1,9 @@
 use api_dependence::{mysql::mysqlapi, sqlite::sqliteapi};
-use axum::{http, routing::get, Router};
+use axum::{
+    http,
+    routing::{get, post},
+    Router,
+};
 use db::{mysql, sqlite};
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
@@ -22,6 +26,8 @@ async fn main() {
                 .route("/post", get(sqliteapi::get_post))
                 .route("/randomfriend", get(sqliteapi::get_randomfriend))
                 .route("/randompost", get(sqliteapi::get_randompost))
+                .route("/login", post(sqliteapi::login))
+                .route("/login_with_token", get(sqliteapi::login_with_token))
                 .with_state(dbpool)
                 .layer(service);
         }

@@ -12,4 +12,8 @@ data_structures = { path = "../data_structures" }
 serde.workspace = true
 serde_json.workspace = true
 rand = "0.8"
+argon2 = "0.5.3"
 url.workspace = true
+axum-extra.workspace = true
+jsonwebtoken.workspace = true
+chrono.workspace = true

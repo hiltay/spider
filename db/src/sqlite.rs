@@ -156,7 +156,7 @@ pub async fn select_all_from_posts(
 }
 
 /// 查询`posts`表中`link`包含`domain_str`的数据
-/// 
+///
 /// 当num<0时，返回所有数据
 pub async fn select_all_from_posts_with_linklike(
     pool: &SqlitePool,
@@ -205,8 +205,35 @@ pub async fn select_latest_time_from_posts(pool: &SqlitePool) -> Result<String, 
 /// 查询`friends`表的所有数据
 pub async fn select_all_from_friends(pool: &SqlitePool) -> Result<Vec<metadata::Friends>, Error> {
     let sql = String::from("SELECT * FROM friends");
-    let friends = query_as::<_, metadata::Friends>(&sql)
+    let res = query_as::<_, metadata::Friends>(&sql)
         .fetch_all(pool)
         .await?;
-    Ok(friends)
+    Ok(res)
+}
+
+/// 查询`secret`表的所有数据
+pub async fn select_all_from_secret(pool: &SqlitePool) -> Result<Vec<metadata::Secret>, Error> {
+    let sql = String::from("SELECT * FROM secret");
+    let res = query_as::<_, metadata::Secret>(&sql)
+        .fetch_all(pool)
+        .await?;
+    Ok(res)
+}
+
+pub async fn insert_secret_table(
+    secret: &metadata::Secret,
+    pool: &SqlitePool,
+) -> Result<(), Error> {
+    let sql = "INSERT INTO secret (secret_key) VALUES (?)";
+    let q = query(sql).bind(&secret.secret_key);
+    // println!("sql: {},{:?}",q.sql(),q.take_arguments());
+    q.execute(pool).await?;
+    Ok(())
+}
+
+/// 清空`tb`表的数据
+pub async fn truncate_table(pool: &SqlitePool, tb: &str) -> Result<(), Error> {
+    let sql = format!("DELETE FROM {}", tb);
+    query(&sql).execute(pool).await?;
+    Ok(())
 }
