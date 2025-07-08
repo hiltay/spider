@@ -9,7 +9,7 @@ use data_structures::{
     response::{AllPostData, AllPostDataSomeFriend},
 };
 use db::{mysql, MySqlPool};
-use rand::seq::SliceRandom;
+use rand::prelude::*;
 use serde::Deserialize;
 use url::Url;
 
@@ -160,9 +160,9 @@ pub async fn get_randomfriend(
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
     // println!("{:?}",params);
-    let rng = &mut rand::thread_rng();
+    let mut rng = rand::rng();
     let result: Vec<Friends> = friends
-        .choose_multiple(rng, params.num.unwrap_or(1))
+        .choose_multiple(&mut rng, params.num.unwrap_or(1))
         .cloned()
         .collect();
     Ok(Json(result))
@@ -176,9 +176,9 @@ pub async fn get_randompost(
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
-    let rng = &mut rand::thread_rng();
+    let mut rng = rand::rng();
     let result: Vec<Posts> = posts
-        .choose_multiple(rng, params.num.unwrap_or(1))
+        .choose_multiple(&mut rng, params.num.unwrap_or(1))
         .cloned()
         .collect();
     Ok(Json(result))

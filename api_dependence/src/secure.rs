@@ -1,32 +1,27 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use axum::{
-    async_trait,
+    Json, RequestPartsExt, Router,
     extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, RequestPartsExt, Router,
 };
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
     TypedHeader,
+    headers::{Authorization, authorization::Bearer},
 };
 use chrono::{Local, TimeDelta};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use rand::{
-    distributions::{Alphanumeric, DistString},
-    seq::SliceRandom,
-    thread_rng, Rng,
-};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use rand::distr::{Alphanumeric, SampleString};
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 pub fn generate_secret_key() -> String {
-    Alphanumeric.sample_string(&mut rand::thread_rng(), 32)
+    Alphanumeric.sample_string(&mut rand::rng(), 32)
 }
 
 pub fn generate_new_token(password: &str) -> Result<String, AuthError> {
@@ -78,7 +73,6 @@ impl AuthBody {
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Claims
 where
     S: Send + Sync,
@@ -87,6 +81,7 @@ where
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         // Extract the token from the authorization header
+
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await

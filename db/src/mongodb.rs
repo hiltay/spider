@@ -20,7 +20,7 @@ pub async fn insert_post_table(
     db: &Database,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Posts>("Posts");
-    collection.insert_one(post, None).await?;
+    collection.insert_one(post).await?;
     Ok(())
 }
 
@@ -29,7 +29,7 @@ pub async fn insert_friend_table(
     db: &Database,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Friends>("Friends");
-    collection.insert_one(friends, None).await?;
+    collection.insert_one(friends).await?;
     Ok(())
 }
 
@@ -38,7 +38,7 @@ pub async fn bulk_insert_post_table(
     db: &Database,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Posts>("Posts");
-    collection.insert_many(tuples, None).await?;
+    collection.insert_many(tuples).await?;
     Ok(())
 }
 
@@ -47,7 +47,7 @@ pub async fn bulk_insert_friend_table(
     db: &Database,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Friends>("Friends");
-    collection.insert_many(tuples, None).await?;
+    collection.insert_many(tuples).await?;
     Ok(())
 }
 
@@ -58,13 +58,13 @@ pub async fn delete_post_table(
     let collection = db.collection::<Posts>("Posts");
     for posts in tuples {
         let filter = doc! { "link": posts.meta.link,"author":posts.author };
-        collection.delete_many(filter, None).await?;
+        collection.delete_many(filter).await?;
     }
     Ok(())
 }
 
 pub async fn truncate_friend_table(db: &Database) -> Result<(), Box<dyn std::error::Error>> {
     let collection = db.collection::<Friends>("Friends");
-    collection.drop(None).await?;
+    collection.drop().await?;
     Ok(())
 }

@@ -26,7 +26,7 @@ sqlx = { version = "0.8", features = [
     "chrono",
 ] }
 url = "2.4"
-axum = "0.7"
-axum-extra = { version = "0.9.3", features = ["typed-header"] }
-jsonwebtoken = "8.0"
+axum = "0.8"
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
+jsonwebtoken = "9"
 

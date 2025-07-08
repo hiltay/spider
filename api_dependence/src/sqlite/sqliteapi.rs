@@ -1,11 +1,11 @@
 use crate::format_response::PYQError;
 use crate::secure::{
-    create_password_hash, generate_new_token, generate_secret_key, verify_password, AuthBody,
-    AuthError, AuthPayload, Claims, Keys,
+    AuthBody, AuthError, AuthPayload, Claims, Keys, create_password_hash, generate_new_token,
+    generate_secret_key, verify_password,
 };
 use axum::{
-    extract::{Query, State},
     Json,
+    extract::{Query, State},
 };
 use chrono::{Local, TimeDelta};
 use data_structures::metadata;
@@ -13,13 +13,9 @@ use data_structures::{
     metadata::{Friends, Posts},
     response::{AllPostData, AllPostDataSomeFriend},
 };
-use db::{sqlite, SqlitePool};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use rand::{
-    distributions::{Alphanumeric, DistString},
-    seq::SliceRandom,
-    thread_rng, Rng,
-};
+use db::{SqlitePool, sqlite};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use rand::prelude::*;
 use serde::Deserialize;
 use url::Url;
 #[derive(Debug, Deserialize)]
@@ -120,13 +116,13 @@ pub async fn get_post(
                 Ok(v) => v,
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
             };
-            let rng = &mut rand::thread_rng();
-            let friend = match friends.choose(rng).cloned() {
+            let mut rng = rand::rng();
+            let friend = match friends.choose(&mut rng).cloned() {
                 Some(f) => f,
                 None => {
                     return Err(PYQError::QueryDataBaseError(String::from(
                         "friends表数据为空",
-                    )))
+                    )));
                 }
             };
             friend
@@ -238,6 +234,5 @@ pub async fn login_with_token(
     // 获取secret_key
     let secret_key = get_secret_key(&pool).await?;
 
-    
     Ok(secret_key)
 }
