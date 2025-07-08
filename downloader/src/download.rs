@@ -23,7 +23,10 @@ pub fn build_client() -> ClientWithMiddleware {
         .danger_accept_invalid_certs(true);
 
     let baseclient = match tools::load_proxy_env() {
-        Ok(proxy) => baseclient.proxy(Proxy::all(proxy).unwrap()),
+        Ok(proxy) => {
+            println!("use proxy: {}", proxy);
+            baseclient.proxy(Proxy::all(proxy).unwrap())
+        }
         Err(_) => baseclient,
     };
     let baseclient = baseclient.build().unwrap();
