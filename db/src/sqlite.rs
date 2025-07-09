@@ -27,7 +27,7 @@ pub async fn insert_post_table(post: &metadata::Posts, pool: &SqlitePool) -> Res
         .bind(&post.meta.rule)
         .bind(&post.meta.created)
         .bind(&post.meta.updated)
-        .bind(&post.createdAt);
+        .bind(&post.created_at);
     // println!("sql: {},{:?}",q.sql(),q.take_arguments());
     q.execute(pool).await?;
     Ok(())
@@ -43,7 +43,7 @@ pub async fn insert_friend_table(
         .bind(&friends.link)
         .bind(&friends.avatar)
         .bind(&friends.error)
-        .bind(&friends.createdAt);
+        .bind(&friends.created_at);
     // println!("sql: {},{:?}",q.sql(),q.take_arguments());
     q.execute(pool).await?;
     Ok(())
@@ -71,7 +71,7 @@ pub async fn bulk_insert_post_table(
             .push_bind(post.meta.rule)
             .push_bind(post.meta.created)
             .push_bind(post.meta.updated)
-            .push_bind(post.createdAt);
+            .push_bind(post.created_at);
     });
     let query = query_builder.build();
     query.execute(pool).await?;
@@ -96,7 +96,7 @@ pub async fn bulk_insert_friend_table(
         b.push_bind(friends.name)
             .push_bind(friends.link)
             .push_bind(friends.avatar)
-            .push_bind(friends.createdAt);
+            .push_bind(friends.created_at);
     });
     let query = query_builder.build();
     query.execute(pool).await?;

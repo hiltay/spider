@@ -22,7 +22,9 @@ pub mod metadata {
         pub author: String,
         pub avatar: String,
         #[serde(skip_serializing)]
-        pub createdAt: String,
+        #[serde(rename = "createdAt")]
+        #[sqlx(rename = "createdAt")]
+        pub created_at: String,
     }
 
     impl BasePosts {
@@ -44,12 +46,12 @@ pub mod metadata {
     }
 
     impl Posts {
-        pub fn new(meta: BasePosts, author: String, avatar: String, createdAt: String) -> Posts {
+        pub fn new(meta: BasePosts, author: String, avatar: String, created_at: String) -> Posts {
             Posts {
                 meta,
                 author,
                 avatar,
-                createdAt,
+                created_at,
             }
         }
     }
@@ -62,7 +64,9 @@ pub mod metadata {
         #[serde(skip_serializing)]
         pub error: bool,
         #[serde(skip_serializing)]
-        pub createdAt: String,
+        #[serde(rename = "createdAt")]
+        #[sqlx(rename = "createdAt")]
+        pub created_at: String,
     }
 
     impl Friends {
@@ -71,14 +75,14 @@ pub mod metadata {
             link: String,
             avatar: String,
             error: bool,
-            createdAt: String,
+            created_at: String,
         ) -> Friends {
             Friends {
                 name,
                 link,
                 avatar,
                 error,
-                createdAt,
+                created_at,
             }
         }
     }
@@ -112,14 +116,20 @@ pub mod config {
 
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct Settings {
-        pub LINK: Vec<LinkMeta>,
-        pub SETTINGS_FRIENDS_LINKS: SettingsFriendsLinksMeta,
-        pub BLOCK_SITE: Vec<String>,
+        #[serde(rename = "LINK")]
+        pub link: Vec<LinkMeta>,
+        #[serde(rename="SETTINGS_FRIENDS_LINKS")]
+        pub settings_friends_links: SettingsFriendsLinksMeta,
+        #[serde(rename="BLOCK_SITE")]
+        pub block_site: Vec<String>,
         // pub MAX_POSTS_NUM: usize,
         // pub HTTP_PROXY: bool,
-        pub OUTDATE_CLEAN: usize,
-        pub DATABASE: String,
-        pub DEPLOY_TYPE: String,
+        #[serde(rename="OUTDATE_CLEAN")]
+        pub outdate_clean: usize,
+        #[serde(rename="DATABASE")]
+        pub database: String,
+        #[serde(rename="DEPLOY_TYPE")]
+        pub deploy_type: String,
     }
 }
 

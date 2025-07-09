@@ -86,7 +86,7 @@ pub async fn start_crawl_postpages(
     client: &ClientWithMiddleware,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     // check block url
-    let block_sites = &settings.BLOCK_SITE;
+    let block_sites = &settings.block_site;
     if check_block_site(block_sites, &base_postpage_url) {
         return Ok(Vec::new());
     };
@@ -249,10 +249,10 @@ pub async fn start_crawl_linkpages(
     client: &ClientWithMiddleware,
 ) -> Vec<metadata::Friends> {
     let mut format_base_friends = vec![];
-    let start_urls = &settings.LINK;
+    let start_urls = &settings.link;
     for linkmeta in start_urls {
         // check block url
-        let block_sites = &settings.BLOCK_SITE;
+        let block_sites = &settings.block_site;
         if check_block_site(block_sites, &linkmeta.link) {
             continue;
         };

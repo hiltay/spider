@@ -46,10 +46,10 @@ async fn main() {
     }
 
     // 处理配置项友链
-    if fc_settings.SETTINGS_FRIENDS_LINKS.enable {
+    if fc_settings.settings_friends_links.enable {
         println!("处理配置项友链...");
         // TODO json_api impl
-        let settings_friend_postpages = fc_settings.SETTINGS_FRIENDS_LINKS.list.clone();
+        let settings_friend_postpages = fc_settings.settings_friends_links.list.clone();
         for postpage_vec in settings_friend_postpages {
             let tm = now;
             let created_at = tools::strptime_to_string_ymdhms(tm);
@@ -93,7 +93,7 @@ async fn main() {
     let mut success_posts = Vec::new();
     let mut success_friends = Vec::new();
     let mut failed_friends = Vec::new();
-    match fc_settings.DATABASE.as_str() {
+    match fc_settings.database.as_str() {
         "sqlite" => {
             // get sqlite conn pool
             let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();

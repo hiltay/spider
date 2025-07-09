@@ -12,5 +12,10 @@ jsonwebtoken.workspace = true
 api_dependence = { path = "../api_dependence" }
 db = { path = "../db" }
 tools = { path = "../tools" }
-tower-http = {version = "0.6",features = ["cors"]}
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 tower = "0.5"
+bytes = "1"
+http-body-util = "0.1"
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
