@@ -39,3 +39,4 @@ tracing-subscriber = { version = "0.3", features = [
     "time",
     "chrono",
 ] }
+logroller = "0.1"
