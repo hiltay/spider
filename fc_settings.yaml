@@ -54,7 +54,7 @@ BLOCK_SITE: [
 
 # 从每个主页中最多获取几篇文章，请设置一个正整数
 # 设置为0表示无限制
-MAX_POSTS_NUM:  1
+MAX_POSTS_NUM:  25
 
 # 如果要启用HTTP代理，需要添加一个环境变量，名称为PROXY，值为[IP]:[端口]或代理地址，比如：192.168.1.106:8080
 # 注意，如果本身设置了系统代理 (环境变量中设置了 `HTTP_PROXY`、`http_proxy`、`HTTPS_PROXY`、`https_proxy`) 则默认启用这些代理。
