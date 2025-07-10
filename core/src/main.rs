@@ -92,7 +92,10 @@ async fn main() {
         }
     }
     for task in tasks {
-        let res = task.await.unwrap();
+        let mut res = task.await.unwrap();
+        if fc_settings.max_posts_num > 0 {
+            res.1 = res.1.iter().take(fc_settings.max_posts_num).cloned().collect();
+        }
         all_res.push(res);
     }
     let mut success_posts = Vec::new();
