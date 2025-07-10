@@ -4,6 +4,7 @@ use feed_rs::parser;
 use reqwest_middleware::ClientWithMiddleware;
 use std::{collections::HashMap, vec};
 use tools;
+use tracing::{debug, info, warn};
 use url::{ParseError, Url};
 // time zones
 // +08:00
@@ -52,7 +53,6 @@ pub async fn crawl_link_page<'a>(
                             Some(v) => v,
                             None => continue,
                         },
-                        // _ => String::from(""),
                     };
                     res.push(parsed_field);
                 }
@@ -62,13 +62,13 @@ pub async fn crawl_link_page<'a>(
                 }
             }
 
-            // println!("{:?}",html);
+            // info!("{:?}",html);
 
             result.insert(rule, res);
         }
         // DEBUG:
         // if result.len() < 4 {
-        //     println!(
+        //     debug!(
         //         "页面：{}, 使用规则：{:?}, 解析结果：{:#?}",
         //         url, theme, result
         //     );
@@ -86,7 +86,7 @@ pub async fn crawl_post_page<'a>(
 ) -> Result<HashMap<&'a str, Vec<String>>, Box<dyn std::error::Error>> {
     // let html = reqwest::get(url).await?.text().await?;
     // DEBUG:
-    // println!("{}", url);
+    // debug!("{}", url);
     let html = client
         .get(url)
         .send()
@@ -141,7 +141,7 @@ pub async fn crawl_post_page<'a>(
                 }
                 if res.len() > 0 {
                     // DEBUG:
-                    // println!("{}-{}-{}-{}",use_theme, match_rule,attr,current_field);
+                    // debug!("{}-{}-{}-{}",use_theme, match_rule,attr,current_field);
                     if !result.contains_key(current_field) {
                         result.insert(current_field, res);
                     }
@@ -151,7 +151,7 @@ pub async fn crawl_post_page<'a>(
                     }
                 } else {
                     // DEBUG:
-                    // println!(
+                    // debug!(
                     //     "页面：{},字段：{},使用规则:{},解析结果：{:?}",
                     //     url, current_field, use_theme, res
                     // );
@@ -161,7 +161,7 @@ pub async fn crawl_post_page<'a>(
     }
     // DEBUG:
     // if result.len() < 4 {
-    //     println!(
+    //     debug!(
     //         "页面：{}, 已使用规则：{:?}, 解析结果：{:?}",
     //         url, used_css_rules, result
     //     );
@@ -176,7 +176,7 @@ pub async fn crawl_post_page_feed(
     client: &ClientWithMiddleware,
 ) -> Result<Vec<metadata::BasePosts>, Box<dyn std::error::Error>> {
     // DEBUG:
-    // println!("feed.....{}", url);
+    // debug!("feed.....{}", url);
     let html = client
         .get(url)
         .send()
@@ -193,12 +193,12 @@ pub async fn crawl_post_page_feed(
             // 标题
             let title = entry
                 .title
-                .map_or(String::from("无题"), |t| t.content.to_string());
+                .map_or(String::from("文章标题获取失败"), |t| t.content.to_string());
             // url链接
             let link = if entry.links.len() > 0 {
                 entry.links[0].href.clone()
             } else {
-                println!("feed无法解析url链接");
+                warn!("feed无法解析url链接");
                 continue;
             };
             // 处理相对地址
@@ -208,12 +208,12 @@ pub async fn crawl_post_page_feed(
                     ParseError::RelativeUrlWithoutBase => match base_url.join(&link) {
                         Ok(completion_url) => completion_url.to_string(),
                         Err(e) => {
-                            println!("无法拼接相对地址：{},error:{}", link, e);
+                            warn!("无法拼接相对地址：{},error:{}", link, e);
                             continue;
                         }
                     },
                     _ => {
-                        println!("无法处理地址：{}", link);
+                        warn!("无法处理地址：{}", link);
                         continue;
                     }
                 },

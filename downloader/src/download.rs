@@ -7,13 +7,13 @@ use data_structures::{
 use regex::Regex;
 use reqwest::{ClientBuilder as CL, Proxy};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::{self, task::JoinSet};
 use tools;
+use tracing::{debug, error, info, trace, warn};
 use url::{ParseError, Url};
-
 /// 构建请求客户端
 pub fn build_client() -> ClientWithMiddleware {
     let timeout = Duration::new(20, 0);
@@ -24,7 +24,7 @@ pub fn build_client() -> ClientWithMiddleware {
 
     let baseclient = match tools::load_proxy_env() {
         Ok(proxy) => {
-            println!("use proxy: {}", proxy);
+            info!("use proxy: {}", proxy);
             baseclient.proxy(Proxy::all(proxy).unwrap())
         }
         Err(_) => baseclient,
@@ -48,7 +48,7 @@ fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize
         || !download_res.contains_key("link")
         || !download_res.contains_key("avatar")
     {
-        println!("字段`author`或字段`link`或字段`avatar`缺失，请检查css规则");
+        warn!("字段`author`或字段`link`或字段`avatar`缺失，请检查css规则");
         return 0;
     }
     let author_field = download_res.get("author").unwrap();
@@ -56,8 +56,8 @@ fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize
     if author_field.len() == 0 || link_field.len() == 0 {
         return 0;
     } else if author_field.len() != link_field.len() {
-        println!(
-            "字段`author`长度: {}, 字段`link`长度: {},不统一，请检查css规则",
+        warn!(
+            "字段`author`长度: {}, 字段`link`长度: {},不一致，请检查css规则",
             author_field.len(),
             link_field.len()
         );
@@ -90,7 +90,13 @@ pub async fn start_crawl_postpages(
     if check_block_site(block_sites, &base_postpage_url) {
         return Ok(Vec::new());
     };
-    let base_url = Url::parse(&base_postpage_url).unwrap(); // TODO 异常处理
+    let base_url = match Url::parse(&base_postpage_url) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("postpage_url:{} 解析失败:{}", base_postpage_url, e);
+            return Ok(Vec::new());
+        }
+    };
     let css_rules = css_rules.clone();
     let mut joinset = JoinSet::new();
 
@@ -105,14 +111,14 @@ pub async fn start_crawl_postpages(
         let base_url_ = base_url.clone();
         joinset.spawn(async move {
             // 获取当前时间
-            let download_postpage_res =
+            let mut download_postpage_res =
                 match crawler::crawl_post_page(&base_postpage_url, &css_rules, &client_).await {
                     Ok(v) => v,
                     Err(e) => {
-                        println!("{}", e);
+                        warn!("{}", e);
                         return Vec::new();
                     }
-                }; // TODO 异常处理
+                };
             let length;
             // 字段缺失检查
 
@@ -122,7 +128,7 @@ pub async fn start_crawl_postpages(
                 if download_postpage_res.get("title").unwrap().len()
                     != download_postpage_res.get("link").unwrap().len()
                 {
-                    println!(
+                    error!(
                         "url: {} 解析结果缺失`title`或`link`长度不等",
                         base_postpage_url
                     );
@@ -132,12 +138,17 @@ pub async fn start_crawl_postpages(
                     length = download_postpage_res.get("title").unwrap().len()
                 }
             } else {
-                // 缺失title或link任意一个
-                println!(
-                    "url: {} 解析结果缺失`title`或`link`任意一个",
-                    base_postpage_url
-                );
-                return Vec::new();
+                if download_postpage_res.contains_key("link") {
+                    warn!("url: {} 解析结果缺失`title`", base_postpage_url);
+                    // 补充对应长度的title
+                    length = download_postpage_res.get("link").unwrap().len();
+                    let title = vec![String::from("文章标题获取失败"); length];
+                    download_postpage_res.insert("title", title);
+                } else {
+                    // 缺失link，无力回天
+                    error!("url: {} 解析结果缺失`link`", base_postpage_url);
+                    return Vec::new();
+                }
             }
             let mut format_base_posts = vec![];
             for i in 0..length {
@@ -145,7 +156,7 @@ pub async fn start_crawl_postpages(
                     .trim()
                     .to_string();
                 if title.len() == 0 {
-                    title = String::from("无题")
+                    title = String::from("文章标题获取失败")
                 };
                 let link = download_postpage_res.get("link").unwrap()[i]
                     .trim()
@@ -157,12 +168,12 @@ pub async fn start_crawl_postpages(
                         ParseError::RelativeUrlWithoutBase => match base_url_.join(&link) {
                             Ok(completion_url) => completion_url.to_string(),
                             Err(e) => {
-                                println!("无法拼接相对地址：{},error：{}", link, e);
+                                warn!("无法拼接相对地址：{},error：{}", link, e);
                                 continue;
                             }
                         },
                         _ => {
-                            println!("无法处理地址：{}", link);
+                            warn!("无法处理地址：{}", link);
                             continue;
                         }
                     },
@@ -222,7 +233,7 @@ pub async fn start_crawl_postpages(
                 {
                     Ok(v) => v,
                     Err(e) => {
-                        println!("{}", e);
+                        trace!("{}", e);
                         Vec::new()
                     }
                 };
@@ -232,13 +243,14 @@ pub async fn start_crawl_postpages(
         while let Some(res) = joinset.join_next().await {
             if let Ok(success) = res {
                 if success.len() > 0 {
-                    // println!("success:{:?}", success);
+                    info!("{} 解析成功! 共{}条", base_url, success.len());
                     return Ok(success);
                 }
             }
         }
         Ok(Vec::new())
     } else {
+        error!("css_rule 格式错误");
         panic!("css_rule 格式错误");
     }
 }
@@ -266,7 +278,7 @@ pub async fn start_crawl_linkpages(
         {
             Ok(v) => v,
             Err(err) => {
-                println!("{}", err);
+                error!("linkpage:{} 解析失败:{}", linkmeta.link, err);
                 continue;
             }
         };

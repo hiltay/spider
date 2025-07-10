@@ -1,8 +1,5 @@
 use api_dependence::{mysql::mysqlapi, sqlite::sqliteapi};
-use axum::{
-    Router,
-    routing::get,
-};
+use axum::{Router, routing::get};
 use db::{mysql, sqlite};
 use tools::init_tracing;
 use tower::ServiceBuilder;

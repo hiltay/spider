@@ -5,6 +5,7 @@ use downloader::download;
 use sqlx;
 use tokio::{self};
 use tools;
+use tracing::{debug, error, info, warn};
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +23,7 @@ async fn main() {
     // let _cssrule = css_rules.clone();
     let format_base_friends =
         download::start_crawl_linkpages(&fc_settings, &css_rules, &client).await;
-    // println!("{:?}", format_base_friends);
+    // info!("{:?}", format_base_friends);
     let mut all_res = vec![];
     let mut tasks = vec![];
 
@@ -43,7 +44,7 @@ async fn main() {
             )
             .await
             .unwrap();
-            // println!("{:?}",format_base_posts);
+            // info!("{:?}",format_base_posts);
             (friend, format_base_posts)
         });
         tasks.push(task);
@@ -51,7 +52,7 @@ async fn main() {
 
     // 处理配置项友链
     if fc_settings.settings_friends_links.enable {
-        println!("处理配置项友链...");
+        info!("处理配置项友链...");
         // TODO json_api impl
         let settings_friend_postpages = fc_settings.settings_friends_links.list.clone();
         for postpage_vec in settings_friend_postpages {
@@ -84,7 +85,7 @@ async fn main() {
                 )
                 .await
                 .unwrap();
-                // println!("{:?}",format_base_posts);
+                // info!("{:?}",format_base_posts);
                 (base_post, format_base_posts)
             });
             tasks.push(task);
@@ -97,6 +98,7 @@ async fn main() {
     let mut success_posts = Vec::new();
     let mut success_friends = Vec::new();
     let mut failed_friends = Vec::new();
+    let mut affected_rows = 0;
     match fc_settings.database.as_str() {
         "sqlite" => {
             // get sqlite conn pool
@@ -104,7 +106,7 @@ async fn main() {
             match sqlx::migrate!("../db/schema/sqlite").run(&dbpool).await {
                 Ok(()) => (),
                 Err(e) => {
-                    println!("{}", e);
+                    info!("{}", e);
                     return;
                 }
             };
@@ -138,6 +140,16 @@ async fn main() {
                     failed_friends.push(crawl_res.0);
                 }
             }
+
+            // outdated posts cleanup
+            affected_rows =
+                match sqlite::delete_outdated_posts(fc_settings.outdate_clean, &dbpool).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("清理过期文章失败:{}", e);
+                        0
+                    }
+                };
         }
         "mysql" => {
             // get mysql conn pool
@@ -146,7 +158,7 @@ async fn main() {
             match sqlx::migrate!("../db/schema/mysql").run(&dbpool).await {
                 Ok(()) => (),
                 Err(e) => {
-                    println!("{}", e);
+                    info!("{}", e);
                     return;
                 }
             };
@@ -178,6 +190,16 @@ async fn main() {
                     failed_friends.push(crawl_res.0);
                 }
             }
+
+            // outdated posts cleanup
+            affected_rows =
+                match mysql::delete_outdated_posts(fc_settings.outdate_clean, &dbpool).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("清理过期文章失败:{}", e);
+                        0
+                    }
+                };
         }
         "mongodb" => {
             let mongodburi = tools::load_mongodb_env().unwrap();
@@ -214,20 +236,28 @@ async fn main() {
                     failed_friends.push(crawl_res.0);
                 }
             }
+
+            // outdated posts cleanup
+            // TODO
+            affected_rows = 0;
         }
         _ => return,
     };
 
-    println!(
+    info!(
         "成功友链数 {}，失败友链数 {}",
         success_friends.len(),
         failed_friends.len()
     );
-    println!(
+    info!(
         "本次获取总文章数 {}",
         success_posts.iter().fold(0, |acc, x| { acc + x.len() })
     );
-    println!(
+    info!(
+        "清理过期文章(距今超过{}天) {} 条",
+        fc_settings.outdate_clean, affected_rows
+    );
+    info!(
         "失联友链明细 {}",
         serde_json::to_string_pretty(&failed_friends).unwrap()
     );

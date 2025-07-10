@@ -1,17 +1,22 @@
+use sqlx::SqlitePool;
+use sqlx::migrate;
 use tracing::info;
+use db::sqlite;
 use tracing_subscriber::{fmt, prelude::*};
-fn main() {
-    let formmater_string = "%Y-%m-%d %H:%M:%S (%Z)".to_string();
-    let timer = tracing_subscriber::fmt::time::ChronoLocal::new(formmater_string);
-    let fmt_layer = fmt::layer()
-        .with_target(true)
-        .with_level(true)
-        .with_timer(timer)
-        .with_file(true)
-        .with_line_number(true)
-        .compact();
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .init();
-    info!("Hello, world!");
+use tokio::main;
+
+
+#[tokio::main]
+async fn main() {
+    let _guard =tools::init_tracing("tmptest", Some("trace"));
+    let dbpool = sqlite::connect_sqlite_dbpool("data.db").await.unwrap();
+    match sqlx::migrate!("../db/schema/sqlite").run(&dbpool).await {
+        Ok(()) => (),
+        Err(e) => {
+            info!("{}", e);
+            return;
+        }
+    };
+    
+    sqlite::delete_outdated_posts(1, &dbpool).await.unwrap();
 }

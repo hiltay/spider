@@ -6,3 +6,4 @@
 /db/target
 data.db
 .DS_Store
+logs/

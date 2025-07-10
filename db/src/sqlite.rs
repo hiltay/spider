@@ -1,7 +1,7 @@
 use data_structures::metadata;
 use sqlx::{
-    query, query_as, sqlite::SqliteConnectOptions, sqlite::SqlitePool, sqlite::SqlitePoolOptions,
-    Error, QueryBuilder, Row, Sqlite,
+    Error, QueryBuilder, Row, Sqlite, query, query_as, sqlite::SqliteConnectOptions,
+    sqlite::SqlitePool, sqlite::SqlitePoolOptions,
 };
 use std::path::Path;
 
@@ -216,4 +216,14 @@ pub async fn truncate_table(pool: &SqlitePool, tb: &str) -> Result<(), Error> {
     let sql = format!("DELETE FROM {}", tb);
     query(&sql).execute(pool).await?;
     Ok(())
+}
+
+pub async fn delete_outdated_posts(days: usize, dbpool: &SqlitePool) -> Result<usize, Error> {
+    let sql = format!(
+        "DELETE FROM posts WHERE date(updated) < date('now', '-{} days')",
+        days
+    );
+    let affected_rows = query(&sql).execute(dbpool).await?;
+
+    Ok(affected_rows.rows_affected() as usize)
 }
