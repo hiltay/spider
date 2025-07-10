@@ -1,9 +1,7 @@
 use data_structures::metadata::{self, Friends, Posts};
-use futures::stream::TryStreamExt;
 use mongodb::{
-    bson::{doc, Document},
+    bson::doc,
     options::ClientOptions,
-    options::FindOptions,
     Client, Database,
 };
 

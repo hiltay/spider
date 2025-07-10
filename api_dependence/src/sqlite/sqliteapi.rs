@@ -1,20 +1,18 @@
 use crate::format_response::PYQError;
 use crate::secure::{
-    AuthBody, AuthError, AuthPayload, Claims, Keys, create_password_hash, generate_new_token,
-    generate_secret_key, verify_password,
+    AuthBody, AuthError, Claims, generate_new_token,
+    generate_secret_key,
 };
 use axum::{
     Json,
     extract::{Query, State},
 };
-use chrono::{Local, TimeDelta};
 use data_structures::metadata;
 use data_structures::{
     metadata::{Friends, Posts},
     response::{AllPostData, AllPostDataSomeFriend},
 };
 use db::{SqlitePool, sqlite};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use rand::prelude::*;
 use serde::Deserialize;
 use url::Url;
@@ -164,9 +162,9 @@ pub async fn get_randomfriend(
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
     // println!("{:?}",params);
-    let rng = &mut rand::thread_rng();
+    let mut rng = rand::rng();
     let result: Vec<Friends> = friends
-        .choose_multiple(rng, params.num.unwrap_or(1))
+        .choose_multiple(&mut rng, params.num.unwrap_or(1))
         .cloned()
         .collect();
     Ok(Json(result))
@@ -180,9 +178,9 @@ pub async fn get_randompost(
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
-    let rng = &mut rand::thread_rng();
+    let mut rng = rand::rng();
     let result: Vec<Posts> = posts
-        .choose_multiple(rng, params.num.unwrap_or(1))
+        .choose_multiple(&mut rng, params.num.unwrap_or(1))
         .cloned()
         .collect();
     Ok(Json(result))

@@ -1,5 +1,4 @@
 use crate::format_response::PYQError;
-use crate::secure;
 use axum::{
     extract::{Query, State},
     Json,
@@ -113,8 +112,8 @@ pub async fn get_post(
                 Ok(v) => v,
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
             };
-            let rng = &mut rand::thread_rng();
-            let friend = match friends.choose(rng).cloned() {
+            let mut rng = rand::rng();
+            let friend = match friends.choose(&mut rng).cloned() {
                 Some(f) => f,
                 None => {
                     return Err(PYQError::QueryDataBaseError(String::from(

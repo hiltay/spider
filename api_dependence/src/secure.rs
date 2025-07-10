@@ -3,11 +3,10 @@ use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use axum::{
-    Json, RequestPartsExt, Router,
+    Json, RequestPartsExt,
     extract::FromRequestParts,
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
-    routing::{get, post},
 };
 use axum_extra::{
     TypedHeader,

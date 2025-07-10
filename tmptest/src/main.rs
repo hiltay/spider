@@ -1,6 +1,5 @@
 use tracing::info;
-use tracing_subscriber::{EnvFilter, fmt, prelude::*, registry::Registry};
-use tools::get_yaml_settings;
+use tracing_subscriber::{fmt, prelude::*};
 fn main() {
     let formmater_string = "%Y-%m-%d %H:%M:%S (%Z)".to_string();
     let timer = tracing_subscriber::fmt::time::ChronoLocal::new(formmater_string);
