@@ -8,6 +8,10 @@ use tools;
 
 #[tokio::main]
 async fn main() {
+    let _guard = tools::init_tracing(
+        "core",
+        Some("error,core=debug,db=debug,downloader=debug,tools=debug,data_structures=debug"),
+    );
     let now = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
 
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();

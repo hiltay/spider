@@ -76,14 +76,11 @@ dependencies = [
  "db",
  "http-body-util",
  "jsonwebtoken",
- "logroller",
  "tokio",
  "tools",
  "tower",
  "tower-http",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -440,6 +437,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tools",
+ "tracing",
 ]
 
 [[package]]
@@ -3814,7 +3812,11 @@ dependencies = [
  "chrono",
  "data_structures",
  "dotenvy",
+ "logroller",
  "serde_yaml",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
 ]
 
 [[package]]

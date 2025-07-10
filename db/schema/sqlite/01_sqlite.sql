@@ -20,15 +20,3 @@ CREATE TABLE posts (
 	"createdAt" VARCHAR(1024), 
 	PRIMARY KEY (id)
 );
-
-CREATE TABLE auth (
-	id INTEGER NOT NULL, 
-	password VARCHAR(1024), 
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE secret (
-	id INTEGER NOT NULL, 
-	secret_key VARCHAR(1024), 
-	PRIMARY KEY (id)
-);
