@@ -104,7 +104,7 @@ jobs:
   keepalive-workflow:
     name: Keepalive Workflow
     if: github.event_name == 'schedule'
-    needs: update-friends-posts
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       actions: write
