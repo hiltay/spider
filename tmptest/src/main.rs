@@ -1,10 +1,6 @@
 
-use data_structures::response::AllPostData;
-use db::{SqlitePool, sqlite};
+use db::sqlite;
 use tracing::info;
-use serde_json::json;
-use std::fs::File;
-use std::io;
 
 
 
@@ -19,9 +15,4 @@ async fn main() {
             return;
         }
     };
-
-    // 调用get_all将数据写入json文件
-    if let Err(e) = get_all(dbpool.clone()).await {
-        info!("写入JSON数据失败: {}", e);
-    }
 }
