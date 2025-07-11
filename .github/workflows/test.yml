@@ -17,9 +17,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@main
         
-      - name: Cache dependencies and build outputs
-        id: cache
-        uses: actions/cache@main
+      - name: Restore Cache
+        id: cache-restore
+        uses: actions/cache/restore@v3
         with:
           path: |
             ~/.cargo/registry
@@ -31,7 +31,7 @@ jobs:
       
       - name: Check Cache Status
         run: |
-          if [ "${{ steps.cache.outputs.cache-hit }}" == "true" ]; then
+          if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
             echo "✅ Cache hit! Using cached dependencies and build artifacts."
             echo "Binary timestamp: $(stat -c %y target/release/spider 2>/dev/null || echo 'Binary not found in cache')"
             echo "Binary size: $(du -h target/release/spider 2>/dev/null | cut -f1 || echo 'Binary not found in cache')"
@@ -41,6 +41,15 @@ jobs:
         
       - name: Build
         run: cargo build --release
+        
+      - name: Save Cache
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         
       - name: Read Config Values
         id: read_config
