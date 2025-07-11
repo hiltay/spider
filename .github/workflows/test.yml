@@ -1,0 +1,53 @@
+name: update-friends-posts
+on:
+  push:
+    branches: [ "rs_dev" ]
+  schedule:
+    - cron: "0 0,6,12,18,21 * * *"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build: 
+    name: build binary file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        
+      - name: Cache dependencies and build outputs
+        id: cache
+        uses: actions/cache@main
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Check Cache Status
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" == "true" ]; then
+            echo "✅ Cache hit! Using cached dependencies and build artifacts."
+            echo "Binary timestamp: $(stat -c %y target/release/spider 2>/dev/null || echo 'Binary not found in cache')"
+            echo "Binary size: $(du -h target/release/spider 2>/dev/null | cut -f1 || echo 'Binary not found in cache')"
+          else
+            echo "❌ Cache miss! Will compile from scratch."
+          fi
+        
+      - name: Build
+        run: cargo build --release
+        
+      - name: Read Config Values
+        id: read_config
+        run: |
+          echo "Reading configuration from fc_settings.yaml"
+          DEPLOY_TYPE=$(grep "DEPLOY_TYPE:" fc_settings.yaml | awk '{print $2}')
+          DATABASE=$(grep "DATABASE:" fc_settings.yaml | awk '{print $2}')
+          echo "DEPLOY_TYPE=$DEPLOY_TYPE" >> $GITHUB_ENV
+          echo "DATABASE=$DATABASE" >> $GITHUB_ENV
+          echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE"
