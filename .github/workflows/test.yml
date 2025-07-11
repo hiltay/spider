@@ -15,7 +15,8 @@ env:
   PROXY: ${{ secrets.PROXY }} # 可选，http代理
   # mysql、sqlite、mongodb配置三选一即可
   # mysql配置
-  MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
+  # MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
+  MYSQL_URI: MYSQL_URI1111 # MySQL URI
   # sqlite配置，用于将db文件上传到github仓库
   GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
   GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
@@ -48,8 +49,8 @@ jobs:
         run: |
           if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
             echo "✅ Cache hit! Using cached dependencies and build artifacts."
-            echo "Binary timestamp: $(stat -c %y target/release/spider 2>/dev/null || echo 'Binary not found in cache')"
-            echo "Binary size: $(du -h target/release/spider 2>/dev/null | cut -f1 || echo 'Binary not found in cache')"
+            echo "Binary timestamp: $(stat -c %y target/release/core 2>/dev/null || echo 'Binary not found in cache')"
+            echo "Binary size: $(du -h target/release/core 2>/dev/null | cut -f1 || echo 'Binary not found in cache')"
           else
             echo "❌ Cache miss! Will compile from scratch."
           fi
