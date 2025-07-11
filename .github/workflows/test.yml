@@ -15,8 +15,7 @@ env:
   PROXY: ${{ secrets.PROXY }} # 可选，http代理
   # mysql、sqlite、mongodb配置三选一即可
   # mysql配置
-  # MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
-  MYSQL_URI: MYSQL_URI1111 # MySQL URI
+  MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
   # sqlite配置，用于将db文件上传到github仓库
   GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
   GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
@@ -33,40 +32,63 @@ jobs:
       - name: Checkout
         uses: actions/checkout@main
         
-      - name: Restore Cache
-        id: cache-restore
+      # 第一步：恢复依赖缓存（只基于 Cargo.lock）
+      - name: Restore Dependencies Cache
+        id: deps-cache-restore
         uses: actions/cache/restore@v3
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-deps-
+      
+      # 第二步：恢复构建产物缓存（基于 Cargo.lock 和代码哈希）
+      - name: Restore Build Cache
+        id: build-cache-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: target
+          # 这里同时基于代码哈希和 Cargo.lock
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
+          # 如果完全匹配的缓存不存在，尝试只基于 Cargo.lock 的缓存
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-cargo-build-
       
       - name: Check Cache Status
         run: |
-          if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
-            echo "✅ Cache hit! Using cached dependencies and build artifacts."
-            echo "Binary timestamp: $(stat -c %y target/release/core 2>/dev/null || echo 'Binary not found in cache')"
-            echo "Binary size: $(du -h target/release/core 2>/dev/null | cut -f1 || echo 'Binary not found in cache')"
+          echo "Dependencies cache status: ${{ steps.deps-cache-restore.outputs.cache-hit == 'true' && '✅ Hit' || '❌ Miss' }}"
+          echo "Build cache status: ${{ steps.build-cache-restore.outputs.cache-hit == 'true' && '✅ Hit' || '❌ Miss' }}"
+          
+          if [ -f "target/release/core" ]; then
+            echo "Binary found in cache:"
+            echo "Binary timestamp: $(stat -c %y target/release/core)"
+            echo "Binary size: $(du -h target/release/core | cut -f1)"
           else
-            echo "❌ Cache miss! Will compile from scratch."
+            echo "Binary not found in cache, will compile."
           fi
         
       - name: Build
         run: cargo build --release
         
-      - name: Save Cache
-        if: ${{ steps.cache-restore.outputs.cache-hit != 'true' }}
+      # 保存依赖缓存（只在依赖缓存未命中时）
+      - name: Save Dependencies Cache
+        if: steps.deps-cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v3
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+      
+      # 总是保存构建产物缓存，因为可能有代码更新
+      - name: Save Build Cache
+        uses: actions/cache/save@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
         
       - name: Read Config Values
         id: read_config

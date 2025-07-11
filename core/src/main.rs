@@ -11,13 +11,11 @@ use tracing::{error, info};
 
 #[tokio::main]
 async fn main() {
-    let mysql_uri = dotenvy::var("MYSQL_URI");
     let _guard = tools::init_tracing(
         "core",
         Some("error,core=debug,db=debug,downloader=debug,tools=debug,data_structures=debug"),
     );
-    info!("mysql_uri: {:?}", mysql_uri);
-    exit(0);
+
     let now = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
 
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
