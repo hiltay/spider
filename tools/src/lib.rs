@@ -109,20 +109,23 @@ pub fn get_yaml_settings(path: &str) -> io::Result<config::Settings> {
     }
 }
 
-/// 获取环境变量中的mysql连接
-pub fn load_mysql_conn_env() -> Result<String, Box<dyn std::error::Error>> {
+/// 获取环境变量，如果为空则返回错误
+pub fn get_env_var(var_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     dotenvy::dotenv()?;
-    Ok(dotenvy::var("MYSQL_URI")?)
-}
-
-/// 获取环境变量中的代理配置
-pub fn load_proxy_env() -> Result<String, Box<dyn std::error::Error>> {
-    dotenvy::dotenv()?;
-    Ok(dotenvy::var("PROXY")?)
-}
-
-/// 获取环境变量中的MongoDB连接配置
-pub fn load_mongodb_env() -> Result<String, Box<dyn std::error::Error>> {
-    dotenvy::dotenv()?;
-    Ok(dotenvy::var("MONGODB_URI")?)
+    match dotenvy::var(var_name) {
+        Ok(var) => {
+            if var == "" {
+                Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("{} is not set", var_name),
+                )))
+            } else {
+                Ok(var)
+            }
+        }
+        Err(_) => Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("{} is not set", var_name),
+        ))),
+    }
 }

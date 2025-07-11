@@ -164,7 +164,13 @@ async fn main() {
         }
         "mysql" => {
             // get mysql conn pool
-            let mysqlconnstr = tools::load_mysql_conn_env().unwrap();
+            let mysqlconnstr = match tools::get_env_var("MYSQL_URI") {
+                Ok(mysqlconnstr) => mysqlconnstr,
+                Err(e) => {
+                    error!("{}", e);
+                    return;
+                }
+            };
             let dbpool = mysql::connect_mysql_dbpool(&mysqlconnstr).await.unwrap();
             match sqlx::migrate!("../db/schema/mysql").run(&dbpool).await {
                 Ok(()) => (),
@@ -213,7 +219,13 @@ async fn main() {
                 };
         }
         "mongodb" => {
-            let mongodburi = tools::load_mongodb_env().unwrap();
+            let mongodburi = match tools::get_env_var("MONGODB_URI") {
+                Ok(mongodburi) => mongodburi,
+                Err(e) => {
+                    error!("{}", e);
+                    return;
+                }
+            };
             let clientdb = mongodb::connect_mongodb_clientdb(&mongodburi)
                 .await
                 .unwrap();

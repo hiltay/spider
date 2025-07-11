@@ -22,7 +22,7 @@ pub fn build_client() -> ClientWithMiddleware {
         .use_rustls_tls()
         .danger_accept_invalid_certs(true);
 
-    let baseclient = match tools::load_proxy_env() {
+    let baseclient = match tools::get_env_var("PROXY") {
         Ok(proxy) => {
             info!("use proxy: {}", proxy);
             baseclient.proxy(Proxy::all(proxy).unwrap())

@@ -5,6 +5,7 @@ use tools::init_tracing;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
+use tracing::error;
 
 #[tokio::main]
 async fn main() {
@@ -33,7 +34,13 @@ async fn main() {
         }
         "mysql" => {
             // get mysql conn pool
-            let mysqlconnstr = tools::load_mysql_conn_env().unwrap();
+            let mysqlconnstr = match tools::get_env_var("MYSQL_URI") {
+                Ok(mysqlconnstr) => mysqlconnstr,
+                Err(e) => {
+                    error!("{}", e);
+                    return;
+                }
+            };
             let dbpool = mysql::connect_mysql_dbpool(&mysqlconnstr).await.unwrap();
             app = Router::new()
                 .route("/all", get(mysqlapi::get_all))
