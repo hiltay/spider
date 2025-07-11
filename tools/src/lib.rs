@@ -13,6 +13,7 @@ use tracing_subscriber::{
     prelude::*,
 };
 
+#[allow(deprecated)]
 pub fn init_tracing(logger_name: &str, filter_str: Option<&str>) -> WorkerGuard {
     // stdout和file同时输出，并设置不同的fmt
     // 输出划分为http和core两个文件，通过filter来实现 https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html

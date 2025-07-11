@@ -1,5 +1,3 @@
-use std::process::exit;
-
 use chrono::Utc;
 use data_structures::metadata::{self};
 use db::{mongodb, mysql, sqlite};
@@ -109,7 +107,7 @@ async fn main() {
     let mut success_posts = Vec::new();
     let mut success_friends = Vec::new();
     let mut failed_friends = Vec::new();
-    let mut affected_rows = 0;
+    let affected_rows;
     match fc_settings.database.as_str() {
         "sqlite" => {
             // get sqlite conn pool

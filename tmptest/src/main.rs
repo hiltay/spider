@@ -1,6 +1,5 @@
 use tracing::info;
 use db::sqlite;
-use tracing_subscriber::prelude::*;
 
 
 #[tokio::main]
