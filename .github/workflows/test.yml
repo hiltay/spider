@@ -8,6 +8,21 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # 在这里查看需要添加的secert
+  # 通用配置
+  SIMPLE_MODE: false # 极简模式是否开启
+  DATABASE: sqlite
+  PROXY: ${{ secrets.PROXY }} # 可选，http代理
+  # mysql、sqlite、mongodb配置三选一即可
+  # mysql配置
+  MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
+  # sqlite配置，用于将db文件上传到github仓库
+  GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
+  GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
+  # mongodb配置
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}  # mongodb URI 支持'mongodb://'和'mongodb+srv://'
+  TZ: Asia/Shanghai
 
 jobs:
   build: 
@@ -43,6 +58,7 @@ jobs:
         run: cargo build --release
         
       - name: Save Cache
+        if: ${{ steps.cache-restore.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v3
         with:
           path: |
@@ -60,3 +76,5 @@ jobs:
           echo "DEPLOY_TYPE=$DEPLOY_TYPE" >> $GITHUB_ENV
           echo "DATABASE=$DATABASE" >> $GITHUB_ENV
           echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE"
+      - name: Run Core
+        run: cargo run --bin core --release

@@ -29,8 +29,7 @@ sqlx = { version = "0.8", features = [
 url = "2.4"
 axum = "0.8"
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
-jsonwebtoken = "9"
-
+dotenvy = "0.15"
 # logging
 tracing = "0.1"
 tracing-appender = "0.2"

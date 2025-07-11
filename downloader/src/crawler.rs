@@ -4,7 +4,7 @@ use feed_rs::parser;
 use reqwest_middleware::ClientWithMiddleware;
 use std::{collections::HashMap, vec};
 use tools;
-use tracing::{debug, info, warn};
+use tracing::warn;
 use url::{ParseError, Url};
 // time zones
 // +08:00

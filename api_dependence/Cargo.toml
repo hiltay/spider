@@ -15,5 +15,4 @@ rand = "0.9"
 argon2 = "0.5.3"
 url.workspace = true
 axum-extra.workspace = true
-jsonwebtoken.workspace = true
 chrono.workspace = true

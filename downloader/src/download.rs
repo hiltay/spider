@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tokio::{self, task::JoinSet};
 use tools;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{error, info, trace, warn};
 use url::{ParseError, Url};
 /// 构建请求客户端
 pub fn build_client() -> ClientWithMiddleware {

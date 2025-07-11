@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use chrono::Utc;
 use data_structures::metadata::{self};
 use db::{mongodb, mysql, sqlite};
@@ -5,14 +7,18 @@ use downloader::download;
 use sqlx;
 use tokio::{self};
 use tools;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() {
+    let envvars: Vec<(String, String)> = dotenvy::vars().collect();
+
     let _guard = tools::init_tracing(
         "core",
         Some("error,core=debug,db=debug,downloader=debug,tools=debug,data_structures=debug"),
     );
+    info!("envvars: {:?}", envvars);
+    exit(0);
     let now = Utc::now().with_timezone(&downloader::BEIJING_OFFSET.unwrap());
 
     let css_rules: tools::Value = tools::get_yaml("./css_rules.yaml").unwrap();
@@ -94,7 +100,12 @@ async fn main() {
     for task in tasks {
         let mut res = task.await.unwrap();
         if fc_settings.max_posts_num > 0 {
-            res.1 = res.1.iter().take(fc_settings.max_posts_num).cloned().collect();
+            res.1 = res
+                .1
+                .iter()
+                .take(fc_settings.max_posts_num)
+                .cloned()
+                .collect();
         }
         all_res.push(res);
     }

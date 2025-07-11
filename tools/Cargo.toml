@@ -9,7 +9,7 @@ edition = "2024"
 data_structures = { path = "../data_structures" }
 serde_yaml.workspace = true
 chrono.workspace = true
-dotenvy = "0.15.7"
+dotenvy.workspace = true
 
 tracing.workspace = true
 tracing-appender.workspace = true

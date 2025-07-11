@@ -1,9 +1,6 @@
-use sqlx::SqlitePool;
-use sqlx::migrate;
 use tracing::info;
 use db::sqlite;
-use tracing_subscriber::{fmt, prelude::*};
-use tokio::main;
+use tracing_subscriber::prelude::*;
 
 
 #[tokio::main]
