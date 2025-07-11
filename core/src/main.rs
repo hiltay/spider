@@ -1,11 +1,49 @@
+use std::fs::File;
+
 use chrono::Utc;
 use data_structures::metadata::{self};
-use db::{mongodb, mysql, sqlite};
+use data_structures::response::AllPostData;
+use db::{SqlitePool, mongodb, mysql, sqlite};
 use downloader::download;
 use sqlx;
 use tokio::{self};
 use tools;
 use tracing::{error, info};
+
+/// 极简模式，写入data.json文件
+pub async fn write_data_to_json(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
+    let posts = sqlite::select_all_from_posts(&pool, 0, 0, "updated").await?;
+
+    let last_updated_time = sqlite::select_latest_time_from_posts(&pool).await?;
+
+    let friends = sqlite::select_all_from_friends(&pool).await?;
+    let friends_num = friends.len();
+    let mut active_num = 0;
+    let mut lost_num = 0;
+    for friend in friends {
+        if friend.error {
+            lost_num += 1;
+        } else {
+            active_num += 1;
+        }
+    }
+    let data = AllPostData::new(
+        friends_num,
+        active_num,
+        lost_num,
+        posts.len(),
+        last_updated_time,
+        posts,
+        0,
+    );
+
+    // 创建data.json文件并写入数据
+    let file = File::create("data.json")?;
+    serde_json::to_writer_pretty(file, &data)?;
+    info!("数据已成功写入到data.json文件");
+
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() {
@@ -159,6 +197,9 @@ async fn main() {
                         0
                     }
                 };
+            if let Err(e) = write_data_to_json(&dbpool).await {
+                info!("写入JSON数据失败: {}", e);
+            }
         }
         "mysql" => {
             // get mysql conn pool

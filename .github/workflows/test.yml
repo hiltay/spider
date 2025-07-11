@@ -1,7 +1,7 @@
 name: update-friends-posts
 on:
   push:
-    branches: [ "rs_dev" ]
+    branches: ["rs_dev"]
   schedule:
     - cron: "0 0,6,12,18,21 * * *"
   workflow_dispatch:
@@ -11,7 +11,7 @@ env:
   # 在这里查看需要添加的secert
   # 通用配置
   SIMPLE_MODE: false # 极简模式是否开启
-  DATABASE: sqlite
+  DATABASE: ${{ secrets.DATABASE || 'sqlite' }} # 默认使用sqlite
   PROXY: ${{ secrets.PROXY }} # 可选，http代理
   # mysql、sqlite、mongodb配置三选一即可
   # mysql配置
@@ -21,17 +21,17 @@ env:
   GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
   # mongodb配置
-  MONGODB_URI: ${{ secrets.MONGODB_URI }}  # mongodb URI 支持'mongodb://'和'mongodb+srv://'
+  MONGODB_URI: ${{ secrets.MONGODB_URI }} # mongodb URI 支持'mongodb://'和'mongodb+srv://'
   TZ: Asia/Shanghai
 
 jobs:
-  build: 
+  build:
     name: build binary file
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@main
-        
+
       # 第一步：恢复依赖缓存（只基于 Cargo.lock）
       - name: Restore Dependencies Cache
         id: deps-cache-restore
@@ -44,7 +44,7 @@ jobs:
           key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-deps-
-      
+
       # 第二步：恢复构建产物缓存（基于 Cargo.lock 和代码哈希）
       - name: Restore Build Cache
         id: build-cache-restore
@@ -57,23 +57,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
             ${{ runner.os }}-cargo-build-
-      
-      - name: Check Cache Status
-        run: |
-          echo "Dependencies cache status: ${{ steps.deps-cache-restore.outputs.cache-hit == 'true' && '✅ Hit' || '❌ Miss' }}"
-          echo "Build cache status: ${{ steps.build-cache-restore.outputs.cache-hit == 'true' && '✅ Hit' || '❌ Miss' }}"
-          
-          if [ -f "target/release/core" ]; then
-            echo "Binary found in cache:"
-            echo "Binary timestamp: $(stat -c %y target/release/core)"
-            echo "Binary size: $(du -h target/release/core | cut -f1)"
-          else
-            echo "Binary not found in cache, will compile."
-          fi
-        
+
       - name: Build
         run: cargo build --release
-        
+
       # 保存依赖缓存（只在依赖缓存未命中时）
       - name: Save Dependencies Cache
         if: steps.deps-cache-restore.outputs.cache-hit != 'true'
@@ -84,22 +71,42 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-      
+
       # 总是保存构建产物缓存，因为可能有代码更新
       - name: Save Build Cache
         uses: actions/cache/save@v4
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
-        
-      - name: Read Config Values
-        id: read_config
-        run: |
-          echo "Reading configuration from fc_settings.yaml"
-          DEPLOY_TYPE=$(grep "DEPLOY_TYPE:" fc_settings.yaml | awk '{print $2}')
-          DATABASE=$(grep "DATABASE:" fc_settings.yaml | awk '{print $2}')
-          echo "DEPLOY_TYPE=$DEPLOY_TYPE" >> $GITHUB_ENV
-          echo "DATABASE=$DATABASE" >> $GITHUB_ENV
-          echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE"
       - name: Run Core
         run: cargo run --bin core --release
+
+      - name: Push sqlite data # sqlite push
+        if: ${{ env.DATABASE == 'sqlite' }}
+        uses: github-actions-x/commit@v2.9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update data.db"
+          files: data.db
+          rebase: "true"
+          name: ${{ env.GITHUB_NAME }}
+          email: ${{ env.GITHUB_EMAIL }}
+      - name: simple mode push # 推送极简模式
+        if: ${{ env.SIMPLE_MODE == 'true' }}
+        uses: github-actions-x/commit@v2.9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update data.json"
+          files: data.json
+          rebase: "true"
+          name: github-actions[bot]
+          email: github-actions@noreply.github.com
+  keepalive-workflow:
+    name: Keepalive Workflow
+    if: github.event_name == 'schedule'
+    needs: update-friends-posts
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1
