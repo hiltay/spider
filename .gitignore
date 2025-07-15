@@ -8,3 +8,10 @@ data.db
 data.json
 .DS_Store
 logs/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+.venv/
