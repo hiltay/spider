@@ -3,7 +3,6 @@ use data_structures::metadata;
 use feed_rs::parser;
 use reqwest_middleware::ClientWithMiddleware;
 use std::{collections::HashMap, vec};
-use tools;
 use tracing::warn;
 use url::{ParseError, Url};
 // time zones
@@ -57,7 +56,7 @@ pub async fn crawl_link_page<'a>(
                     res.push(parsed_field);
                 }
                 // 当前规则获取到结果，则认为规则是有效的，短路后续规则
-                if res.len() > 0 {
+                if !res.is_empty() {
                     break;
                 }
             }
@@ -103,7 +102,7 @@ pub async fn crawl_post_page<'a>(
         let use_theme = css_rule
             .0
             .as_str()
-            .ok_or(format!("无法解析字段，需要一个字符串"))?;
+            .ok_or("无法解析字段，需要一个字符串".to_string())?;
         used_css_rules.push(use_theme.to_string());
         for current_field in ["title", "link", "created", "updated"] {
             let fields = css_rule
@@ -139,7 +138,7 @@ pub async fn crawl_post_page<'a>(
                     };
                     res.push(parsed_field);
                 }
-                if res.len() > 0 {
+                if !res.is_empty() {
                     // DEBUG:
                     // debug!("{}-{}-{}-{}",use_theme, match_rule,attr,current_field);
                     if !result.contains_key(current_field) {
@@ -191,11 +190,11 @@ pub async fn crawl_post_page_feed(
         let mut format_base_posts = vec![];
         for entry in entries {
             // 标题
-            let title = entry
-                .title
-                .map_or(String::from("文章标题获取失败"), |t| t.content.to_string());
+            let title = entry.title.map_or(String::from("文章标题获取失败"), |t| {
+                t.content.to_string()
+            });
             // url链接
-            let link = if entry.links.len() > 0 {
+            let link = if !entry.links.is_empty() {
                 entry.links[0].href.clone()
             } else {
                 warn!("feed无法解析url链接");

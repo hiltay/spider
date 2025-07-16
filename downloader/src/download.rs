@@ -31,11 +31,9 @@ pub fn build_client() -> ClientWithMiddleware {
     };
     let baseclient = baseclient.build().unwrap();
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    let client = ClientBuilder::new(baseclient)
+    ClientBuilder::new(baseclient)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build();
-
-    client
+        .build()
 }
 
 /// 检查link页面解析结果的长度
@@ -53,17 +51,17 @@ fn check_linkpage_res_length(download_res: &HashMap<&str, Vec<String>>) -> usize
     }
     let author_field = download_res.get("author").unwrap();
     let link_field = download_res.get("link").unwrap();
-    if author_field.len() == 0 || link_field.len() == 0 {
-        return 0;
+    if author_field.is_empty() || link_field.is_empty() {
+        0
     } else if author_field.len() != link_field.len() {
         warn!(
             "字段`author`长度: {}, 字段`link`长度: {},不一致，请检查css规则",
             author_field.len(),
             link_field.len()
         );
-        return 0;
+        0
     } else {
-        return author_field.len();
+        author_field.len()
     }
 }
 
@@ -137,25 +135,24 @@ pub async fn start_crawl_postpages(
                     // 关键字段长度相等
                     length = download_postpage_res.get("title").unwrap().len()
                 }
+            } else if download_postpage_res.contains_key("link") {
+                warn!("url: {} 解析结果缺失`title`", base_postpage_url);
+                // 补充对应长度的title
+                length = download_postpage_res.get("link").unwrap().len();
+                let title = vec![String::from("文章标题获取失败"); length];
+                download_postpage_res.insert("title", title);
             } else {
-                if download_postpage_res.contains_key("link") {
-                    warn!("url: {} 解析结果缺失`title`", base_postpage_url);
-                    // 补充对应长度的title
-                    length = download_postpage_res.get("link").unwrap().len();
-                    let title = vec![String::from("文章标题获取失败"); length];
-                    download_postpage_res.insert("title", title);
-                } else {
-                    // 缺失link，无力回天
-                    error!("url: {} 解析结果缺失`link`", base_postpage_url);
-                    return Vec::new();
-                }
+                // 缺失link，无力回天
+                error!("url: {} 解析结果缺失`link`", base_postpage_url);
+                return Vec::new();
             }
+
             let mut format_base_posts = vec![];
             for i in 0..length {
                 let mut title = download_postpage_res.get("title").unwrap()[i]
                     .trim()
                     .to_string();
-                if title.len() == 0 {
+                if title.is_empty() {
                     title = String::from("文章标题获取失败")
                 };
                 let link = download_postpage_res.get("link").unwrap()[i]
@@ -179,10 +176,10 @@ pub async fn start_crawl_postpages(
                     },
                 };
                 let created = match download_postpage_res.get("created") {
-                    Some(ref v) => {
+                    Some(v) => {
                         if i < v.len() {
                             // 如果有值，则使用该值
-                            tools::strftime_to_string_ymd(&v[i].trim())
+                            tools::strftime_to_string_ymd(v[i].trim())
                         } else {
                             // 否则使用当前时间
                             tools::strptime_to_string_ymd(
@@ -199,7 +196,7 @@ pub async fn start_crawl_postpages(
                     Some(v) => {
                         if i < v.len() {
                             // 如果有值，则使用该值
-                            tools::strftime_to_string_ymd(&v[i].trim())
+                            tools::strftime_to_string_ymd(v[i].trim())
                         } else {
                             // 否则使用created
                             created.clone()
@@ -228,7 +225,7 @@ pub async fn start_crawl_postpages(
             let base_url = base_url.clone();
             let feed_url = base_url.join(feed_suffix)?;
             joinset.spawn(async move {
-                let res = match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client)
+                match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client)
                     .await
                 {
                     Ok(v) => v,
@@ -236,13 +233,12 @@ pub async fn start_crawl_postpages(
                         trace!("{}", e);
                         Vec::new()
                     }
-                };
-                res
+                }
             });
         }
         while let Some(res) = joinset.join_next().await {
             if let Ok(success) = res {
-                if success.len() > 0 {
+                if !success.is_empty() {
                     info!("{} 解析成功! 共{}条", base_url, success.len());
                     return Ok(success);
                 }
@@ -272,7 +268,7 @@ pub async fn start_crawl_linkpages(
             &linkmeta.link,
             &linkmeta.theme,
             &css_rules["link_page_rules"],
-            &client,
+            client,
         )
         .await
         {
@@ -292,17 +288,15 @@ pub async fn start_crawl_linkpages(
                 .trim()
                 .to_string();
             // TODO 链接拼接检查
-            let avatar;
             let _avatar = download_linkpage_res.get("avatar").unwrap();
-            if i < _avatar.len() {
-                avatar = download_linkpage_res.get("avatar").unwrap()[i]
+            let avatar = if i < _avatar.len() {
+                download_linkpage_res.get("avatar").unwrap()[i]
                     .trim()
-                    .to_string();
+                    .to_string()
             } else {
                 // 默认图片
-                avatar =
-                    String::from("https://sdn.geekzu.org/avatar/57d8260dfb55501c37dde588e7c3852c")
-            }
+                String::from("https://sdn.geekzu.org/avatar/57d8260dfb55501c37dde588e7c3852c")
+            };
             let tm = Utc::now().with_timezone(&crawler::BEIJING_OFFSET.unwrap());
             let created_at = tools::strptime_to_string_ymdhms(tm);
             let base_post = metadata::Friends::new(author, link, avatar, false, created_at);

@@ -5,18 +5,16 @@ use data_structures::metadata::{self};
 use data_structures::response::AllPostData;
 use db::{SqlitePool, mongodb, mysql, sqlite};
 use downloader::download;
-use sqlx;
 use tokio::{self};
-use tools;
 use tracing::{error, info};
 
 /// 极简模式，写入data.json文件
 pub async fn write_data_to_json(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
-    let posts = sqlite::select_all_from_posts(&pool, 0, 0, "updated").await?;
+    let posts = sqlite::select_all_from_posts(pool, 0, 0, "updated").await?;
 
-    let last_updated_time = sqlite::select_latest_time_from_posts(&pool).await?;
+    let last_updated_time = sqlite::select_latest_time_from_posts(pool).await?;
 
-    let friends = sqlite::select_all_from_friends(&pool).await?;
+    let friends = sqlite::select_all_from_friends(pool).await?;
     let friends_num = friends.len();
     let mut active_num = 0;
     let mut lost_num = 0;
@@ -168,7 +166,7 @@ async fn main() {
                 return;
             }
             for mut crawl_res in all_res {
-                if crawl_res.1.len() > 0 {
+                if !crawl_res.1.is_empty() {
                     let posts = crawl_res.1.iter().map(|post| {
                         metadata::Posts::new(
                             post.clone(),
@@ -244,7 +242,7 @@ async fn main() {
                 return;
             }
             for mut crawl_res in all_res {
-                if crawl_res.1.len() > 0 {
+                if !crawl_res.1.is_empty() {
                     let posts = crawl_res.1.iter().map(|post| {
                         metadata::Posts::new(
                             post.clone(),
@@ -307,7 +305,7 @@ async fn main() {
                 return;
             }
             for mut crawl_res in all_res {
-                if crawl_res.1.len() > 0 {
+                if !crawl_res.1.is_empty() {
                     let posts = crawl_res.1.iter().map(|post| {
                         metadata::Posts::new(
                             post.clone(),

@@ -110,15 +110,14 @@ pub async fn get_post(
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
             };
             let mut rng = rand::rng();
-            let friend = match friends.choose(&mut rng).cloned() {
+            match friends.choose(&mut rng).cloned() {
                 Some(f) => f,
                 None => {
                     return Err(PYQError::QueryDataBaseError(String::from(
                         "friends表数据为空",
                     )));
                 }
-            };
-            friend
+            }
         }
     };
     let posts = match sqlite::select_all_from_posts_with_linklike(

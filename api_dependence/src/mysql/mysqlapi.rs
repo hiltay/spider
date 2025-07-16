@@ -1,13 +1,13 @@
 use crate::format_response::PYQError;
 use axum::{
-    extract::{Query, State},
     Json,
+    extract::{Query, State},
 };
 use data_structures::{
     metadata::{Friends, Posts},
     response::{AllPostData, AllPostDataSomeFriend},
 };
-use db::{mysql, MySqlPool};
+use db::{MySqlPool, mysql};
 use rand::prelude::*;
 use serde::Deserialize;
 use url::Url;
@@ -113,15 +113,14 @@ pub async fn get_post(
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
             };
             let mut rng = rand::rng();
-            let friend = match friends.choose(&mut rng).cloned() {
+            match friends.choose(&mut rng).cloned() {
                 Some(f) => f,
                 None => {
                     return Err(PYQError::QueryDataBaseError(String::from(
                         "friends表数据为空",
-                    )))
+                    )));
                 }
-            };
-            friend
+            }
         }
     };
     let posts = match mysql::select_all_from_posts_with_linklike(

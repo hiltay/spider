@@ -37,7 +37,7 @@ pub async fn insert_friend_table(
         .bind(&friends.name)
         .bind(&friends.link)
         .bind(&friends.avatar)
-        .bind(&friends.error)
+        .bind(friends.error)
         .bind(&friends.created_at);
     // println!("sql: {},{:?}",q.sql(),q.take_arguments());
     q.execute(pool).await?;
@@ -132,19 +132,18 @@ pub async fn select_all_from_posts(
     end: usize,
     sort_rule: &str,
 ) -> Result<Vec<metadata::Posts>, Error> {
-    let sql;
-    if start == 0 && end == 0 {
-        sql = format!("SELECT * FROM posts ORDER BY {sort_rule} DESC");
+    let sql = if start == 0 && end == 0 {
+        format!("SELECT * FROM posts ORDER BY {sort_rule} DESC")
     } else {
-        sql = format!(
+        format!(
             "
         SELECT * FROM posts
         ORDER BY {sort_rule} DESC
         LIMIT {limit} OFFSET {start}
         ",
             limit = end - start
-        );
-    }
+        )
+    };
     // println!("{}",sql);
     let posts = query_as::<_, metadata::Posts>(&sql).fetch_all(pool).await?;
     Ok(posts)

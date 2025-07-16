@@ -1,6 +1,5 @@
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use data_structures::config;
-use dotenvy;
 use logroller::{Compression, LogRollerBuilder, Rotation, RotationAge};
 pub use serde_yaml::Value;
 use std::fs::File;
@@ -115,17 +114,15 @@ pub fn get_env_var(var_name: &str) -> Result<String, Box<dyn std::error::Error>>
     dotenvy::dotenv()?;
     match dotenvy::var(var_name) {
         Ok(var) => {
-            if var == "" {
-                Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+            if var.is_empty() {
+                Err(Box::new(std::io::Error::other(
                     format!("{} is not set", var_name),
                 )))
             } else {
                 Ok(var)
             }
         }
-        Err(_) => Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        Err(_) => Err(Box::new(std::io::Error::other(
             format!("{} is not set", var_name),
         ))),
     }
