@@ -17,9 +17,9 @@ env:
   # mysql配置
   MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
   # sqlite配置，用于将db文件上传到github仓库
-  GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
-  GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
-  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
+  # GITHUB_NAME: ${{ secrets.GH_NAME }} # 你的github昵称
+  # GITHUB_EMAIL: ${{ secrets.GH_EMAIL }} # 你的github邮箱
+  # GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # github token
   # mongodb配置
   MONGODB_URI: ${{ secrets.MONGODB_URI }} # mongodb URI 支持'mongodb://'和'mongodb+srv://'
   TZ: Asia/Shanghai
@@ -87,17 +87,15 @@ jobs:
         with:
           add: "data.db --force"
           message: "Update data.db"
-
+          default_author: github_actions
       - name: simple mode push # 推送极简模式
         if: ${{ env.SIMPLE_MODE == 'true' }}
-        uses: github-actions-x/commit@v2.9
+        uses: EndBug/add-and-commit@v9
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update data.json"
-          files: data.json
-          rebase: "true"
-          name: github-actions[bot]
-          email: github-actions@noreply.github.com
+          add: "data.json --force"
+          message: "Update data.json"
+          default_author: github_actions
+
   keepalive-workflow:
     name: Keepalive Workflow
     if: github.event_name == 'schedule'

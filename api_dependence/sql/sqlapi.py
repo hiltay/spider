@@ -54,7 +54,7 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
         post_data.append(item)
 
     session.close()
-    data["article_data"] = post_data
+    data["article_data"] = post_data  # type: ignore
     return data
 
 
@@ -80,10 +80,11 @@ def query_random_friend(num):
         return {"message": "param 'num' error"}
     session = db_init()
     settings = get_user_settings()
+
     if settings["DATABASE"] == "sqlite":
-        data: list = session.query(Friend).order_by(func.random()).limit(num).all()
+        data = session.query(Friend).order_by(func.random()).limit(num).all()
     else:
-        data: list = session.query(Friend).order_by(func.rand()).limit(num).all()
+        data = session.query(Friend).order_by(func.rand()).limit(num).all()
     session.close()
     friend_list_json = []
     if data:
@@ -102,9 +103,9 @@ def query_random_post(num):
     session = db_init()
     settings = get_user_settings()
     if settings["DATABASE"] == "sqlite":
-        data: list = session.query(Post).order_by(func.random()).limit(num).all()
+        data = session.query(Post).order_by(func.random()).limit(num).all()
     else:
-        data: list = session.query(Post).order_by(func.rand()).limit(num).all()
+        data = session.query(Post).order_by(func.rand()).limit(num).all()
     session.close()
     post_list_json = []
     if data:
@@ -134,7 +135,7 @@ def query_post(
         user = (
             session.query(Friend).filter_by(error=False).order_by(func.random()).first()
         )
-        domain = parse.urlsplit(user.link).netloc
+        domain = parse.urlsplit(user.link).netloc # type: ignore
     else:
         domain = parse.urlsplit(link).netloc
         user = (

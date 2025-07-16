@@ -102,7 +102,7 @@ def query_post(link, num, rule):
     post_collection, friend_db_collection = session.Post, session.Friend
     if link is None:
         friend = query_random_friend(1)
-        domain = parse.urlsplit(friend.get("link")).netloc
+        domain = parse.urlsplit(friend.get("link")).netloc # type: ignore
     else:
         domain = parse.urlsplit(link).netloc
         friend = friend_db_collection.find_one({'link': {'$regex': domain}}, {"_id": 0, "createdAt": 0, "error": 0})
@@ -120,7 +120,7 @@ def query_post(link, num, rule):
         post["floor"] = floor + 1
         data.append(post)
     if friend:
-        friend["article_num"] = len(data)
+        friend["article_num"] = len(data) # type: ignore
         api_json = {"statistical_data": friend, "article_data": data}
     else:
         # 如果user为空直接返回
