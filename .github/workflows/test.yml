@@ -83,14 +83,11 @@ jobs:
 
       - name: Push sqlite data # sqlite push
         if: ${{ env.DATABASE == 'sqlite' }}
-        uses: github-actions-x/commit@v2.9
+        uses: EndBug/add-and-commit@v9
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update data.db"
-          files: data.db
-          rebase: "true"
-          name: ${{ env.GITHUB_NAME }}
-          email: ${{ env.GITHUB_EMAIL }}
+          add: "data.db --force"
+          message: "Update data.db"
+
       - name: simple mode push # 推送极简模式
         if: ${{ env.SIMPLE_MODE == 'true' }}
         uses: github-actions-x/commit@v2.9
