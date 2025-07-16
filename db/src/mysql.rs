@@ -162,9 +162,7 @@ pub async fn select_all_from_posts_with_linklike(
             "SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC LIMIT {num}"
         )
     } else {
-        format!(
-            "SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC"
-        )
+        format!("SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC")
     };
     // println!("{}",sql);
     let posts = query_as::<_, metadata::Posts>(&sql).fetch_all(pool).await?;
