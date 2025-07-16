@@ -25,59 +25,30 @@ env:
   TZ: Asia/Shanghai
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@beta
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        # with:
+        # save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Check
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: rustfmt
+        run: cargo fmt --all --check
   build:
-    name: build binary file
+    needs: check
+    name: build and run core
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@main
-
-      # 第一步：恢复依赖缓存（只基于 Cargo.lock）
-      - name: Restore Dependencies Cache
-        id: deps-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-
-      # 第二步：恢复构建产物缓存（基于 Cargo.lock 和代码哈希）
-      - name: Restore Build Cache
-        id: build-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: target
-          # 这里同时基于代码哈希和 Cargo.lock
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
-          # 如果完全匹配的缓存不存在，尝试只基于 Cargo.lock 的缓存
-          restore-keys: |
-            ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
-            ${{ runner.os }}-cargo-build-
-
+      - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --release
-
-      # 保存依赖缓存（只在依赖缓存未命中时）
-      - name: Save Dependencies Cache
-        if: steps.deps-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-
-      # 总是保存构建产物缓存，因为可能有代码更新
-      - name: Save Build Cache
-        uses: actions/cache/save@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
       - name: Read Config Values
         id: read_config
         run: |
