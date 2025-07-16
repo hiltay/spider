@@ -159,13 +159,11 @@ pub async fn select_all_from_posts_with_linklike(
 ) -> Result<Vec<metadata::Posts>, Error> {
     let sql = if num >= 0 {
         format!(
-            "SELECT * FROM posts WHERE link like '%{}%' ORDER BY {} DESC LIMIT {}",
-            link, sort_rule, num
+            "SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC LIMIT {num}"
         )
     } else {
         format!(
-            "SELECT * FROM posts WHERE link like '%{}%' ORDER BY {} DESC",
-            link, sort_rule,
+            "SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC"
         )
     };
     // println!("{}",sql);
@@ -178,7 +176,7 @@ pub async fn select_one_from_friends_with_linklike(
     pool: &MySqlPool,
     domain_str: &str,
 ) -> Result<metadata::Friends, Error> {
-    let sql = format!("SELECT * from friends WHERE link like '%{}%'", domain_str);
+    let sql = format!("SELECT * from friends WHERE link like '%{domain_str}%'");
     // println!("{}", sql);
 
     let friend = query_as::<_, metadata::Friends>(&sql)

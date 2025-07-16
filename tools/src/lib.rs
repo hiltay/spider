@@ -19,7 +19,7 @@ pub fn init_tracing(logger_name: &str, filter_str: Option<&str>) -> WorkerGuard 
     let formmater_string = "%Y-%m-%d %H:%M:%S (%Z)".to_string();
     let timer = tracing_subscriber::fmt::time::ChronoLocal::new(formmater_string);
     // about timezone,see:https://github.com/tokio-rs/tracing/issues/3102
-    let appender = LogRollerBuilder::new("./logs", &format!("{}.log", logger_name))
+    let appender = LogRollerBuilder::new("./logs", &format!("{logger_name}.log"))
         .rotation(Rotation::AgeBased(RotationAge::Daily)) // Rotate daily
         .max_keep_files(7) // Keep a week's worth of logs
         .time_zone(logroller::TimeZone::Local) // Use local timezone
@@ -116,16 +116,14 @@ pub fn get_env_var(var_name: &str) -> Result<String, Box<dyn std::error::Error>>
         Ok(var) => {
             if var.is_empty() {
                 Err(Box::new(std::io::Error::other(format!(
-                    "{} is not set",
-                    var_name
+                    "{var_name} is not set",
                 ))))
             } else {
                 Ok(var)
             }
         }
         Err(_) => Err(Box::new(std::io::Error::other(format!(
-            "{} is not set",
-            var_name
+            "{var_name} is not set",
         )))),
     }
 }

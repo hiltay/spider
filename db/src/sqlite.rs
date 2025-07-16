@@ -166,13 +166,11 @@ pub async fn select_all_from_posts_with_linklike(
 ) -> Result<Vec<metadata::Posts>, Error> {
     let sql = if num >= 0 {
         format!(
-            "SELECT * FROM posts WHERE link like '%{}%' ORDER BY {} DESC LIMIT {}",
-            link, sort_rule, num
+            "SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC LIMIT {num}"
         )
     } else {
         format!(
-            "SELECT * FROM posts WHERE link like '%{}%' ORDER BY {} DESC",
-            link, sort_rule,
+            "SELECT * FROM posts WHERE link like '%{link}%' ORDER BY {sort_rule} DESC"
         )
     };
     // println!("{}",sql);
@@ -185,7 +183,7 @@ pub async fn select_one_from_friends_with_linklike(
     pool: &SqlitePool,
     domain_str: &str,
 ) -> Result<metadata::Friends, Error> {
-    let sql = format!("SELECT * from friends WHERE link like '%{}%'", domain_str);
+    let sql = format!("SELECT * from friends WHERE link like '%{domain_str}%'");
     // println!("{}", sql);
 
     let friend = query_as::<_, metadata::Friends>(&sql)
@@ -213,16 +211,13 @@ pub async fn select_all_from_friends(pool: &SqlitePool) -> Result<Vec<metadata::
 
 /// 清空`tb`表的数据
 pub async fn truncate_table(pool: &SqlitePool, tb: &str) -> Result<(), Error> {
-    let sql = format!("DELETE FROM {}", tb);
+    let sql = format!("DELETE FROM {tb}");
     query(&sql).execute(pool).await?;
     Ok(())
 }
 
 pub async fn delete_outdated_posts(days: usize, dbpool: &SqlitePool) -> Result<usize, Error> {
-    let sql = format!(
-        "DELETE FROM posts WHERE date(updated) < date('now', '-{} days')",
-        days
-    );
+    let sql = format!("DELETE FROM posts WHERE date(updated) < date('now', '-{days} days')");
     let affected_rows = query(&sql).execute(dbpool).await?;
 
     Ok(affected_rows.rows_affected() as usize)
