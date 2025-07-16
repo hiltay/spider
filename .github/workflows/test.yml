@@ -68,9 +68,9 @@ jobs:
         id: read_config
         run: |
           echo "Reading configuration from fc_settings.yaml"
-          DEPLOY_TYPE=$(grep "DEPLOY_TYPE:" fc_settings.yaml | awk '{print $2}')
-          DATABASE=$(grep "DATABASE:" fc_settings.yaml | awk '{print $2}')
-          SIMPLE_MODE=$(grep "SIMPLE_MODE:" fc_settings.yaml | awk '{print $2}')
+          DEPLOY_TYPE=$(grep "DEPLOY_TYPE:" fc_settings.yaml | awk '{print $2}' | tr -d '"')
+          DATABASE=$(grep "DATABASE:" fc_settings.yaml | awk '{print $2}' | tr -d '"')
+          SIMPLE_MODE=$(grep "SIMPLE_MODE:" fc_settings.yaml | awk '{print $2}' | tr -d '"')
           echo "DEPLOY_TYPE=$DEPLOY_TYPE" >> $GITHUB_ENV
           echo "DATABASE=$DATABASE" >> $GITHUB_ENV
           echo "SIMPLE_MODE=$SIMPLE_MODE" >> $GITHUB_ENV
