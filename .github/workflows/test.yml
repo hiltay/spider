@@ -39,8 +39,23 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: rustfmt
         run: cargo fmt --all --check
-  build:
+
+  test-versions:
     needs: check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, beta, nightly]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test --workspace --all-features --all-targets -- --test-threads=1
+  build:
+    needs: [check, test-versions]
     name: build and run core
     runs-on: ubuntu-latest
     steps:
