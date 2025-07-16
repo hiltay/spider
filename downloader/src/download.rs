@@ -235,11 +235,11 @@ pub async fn start_crawl_postpages(
             });
         }
         while let Some(res) = joinset.join_next().await {
-            if let Ok(success) = res {
-                if !success.is_empty() {
-                    info!("{} 解析成功! 共{}条", base_url, success.len());
-                    return Ok(success);
-                }
+            if let Ok(success) = res
+                && !success.is_empty()
+            {
+                info!("{} 解析成功! 共{}条", base_url, success.len());
+                return Ok(success);
             }
         }
         Ok(Vec::new())

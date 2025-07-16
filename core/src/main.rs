@@ -208,10 +208,10 @@ async fn main() {
                         0
                     }
                 };
-            if fc_settings.simple_mode {
-                if let Err(e) = write_data_to_json(&dbpool).await {
-                    info!("写入JSON数据失败: {}", e);
-                }
+            if fc_settings.simple_mode
+                && let Err(e) = write_data_to_json(&dbpool).await
+            {
+                info!("写入JSON数据失败: {}", e);
             }
         }
         "mysql" => {
