@@ -21,7 +21,6 @@ pub mod metadata {
         pub meta: BasePosts,
         pub author: String,
         pub avatar: String,
-        #[serde(skip_serializing)]
         #[serde(rename = "createdAt")]
         #[sqlx(rename = "createdAt")]
         pub created_at: String,
@@ -61,9 +60,7 @@ pub mod metadata {
         pub name: String,
         pub link: String,
         pub avatar: String,
-        #[serde(skip_serializing)]
         pub error: bool,
-        #[serde(skip_serializing)]
         #[serde(rename = "createdAt")]
         #[sqlx(rename = "createdAt")]
         pub created_at: String,
