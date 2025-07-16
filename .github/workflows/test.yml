@@ -77,6 +77,14 @@ jobs:
           echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE, SIMPLE_MODE=$SIMPLE_MODE"
       - name: Run Core
         run: cargo run --bin core --release
+      - name: Debug Environment
+        run: |
+          echo "DATABASE value: ${{ env.DATABASE }}"
+          echo "Condition check: ${{ env.DATABASE == 'sqlite' }}"
+          echo "DEPLOY_TYPE value: ${{ env.DEPLOY_TYPE }}"
+          echo "Condition check: ${{ env.DEPLOY_TYPE == 'github' }}"
+          echo "SIMPLE_MODE value: ${{ env.SIMPLE_MODE }}"
+          echo "Condition check: ${{ env.SIMPLE_MODE == 'true' }}"
 
       - name: Push sqlite data # sqlite push
         if: ${{ env.DATABASE == 'sqlite' }}
