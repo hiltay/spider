@@ -4,7 +4,7 @@
 /data_structures/target
 /tools/target
 /db/target
-data.db
+*.db
 data.json
 .DS_Store
 logs/

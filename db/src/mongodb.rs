@@ -66,3 +66,13 @@ pub async fn truncate_friend_table(db: &Database) -> Result<(), Box<dyn std::err
     collection.drop().await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    
+
+    #[tokio::test]
+    async fn internal() {
+        assert_eq!(2, 2);
+    }
+}

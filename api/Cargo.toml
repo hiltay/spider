@@ -16,3 +16,6 @@ tower = "0.5"
 bytes = "1"
 http-body-util = "0.1"
 tracing.workspace = true
+
+[dev-dependencies]
+axum-test = "*"

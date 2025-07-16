@@ -96,6 +96,7 @@ pub async fn bulk_insert_friend_table(
         b.push_bind(friends.name)
             .push_bind(friends.link)
             .push_bind(friends.avatar)
+            .push_bind(friends.error)
             .push_bind(friends.created_at);
     });
     let query = query_builder.build();
@@ -226,4 +227,404 @@ pub async fn delete_outdated_posts(days: usize, dbpool: &SqlitePool) -> Result<u
     let affected_rows = query(&sql).execute(dbpool).await?;
 
     Ok(affected_rows.rows_affected() as usize)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use data_structures::metadata::{BasePosts, Friends, Posts};
+    use std::time::SystemTime;
+
+    // 辅助函数：创建测试数据库并返回连接池
+    async fn setup_test_db() -> SqlitePool {
+        let pool = connect_sqlite_dbpool("../tests/test.db").await.unwrap();
+        match sqlx::migrate!("../db/schema/sqlite").run(&pool).await {
+            Ok(()) => (),
+            Err(e) => {
+                panic!("{}", e);
+            }
+        };
+
+        // 清空表以确保测试环境干净
+        truncate_table(&pool, "friends").await.unwrap();
+        truncate_table(&pool, "posts").await.unwrap();
+
+        pool
+    }
+
+    // 测试连接数据库
+    #[tokio::test]
+    async fn test_connect_sqlite_dbpool() {
+        // working directory is db/
+        let pool = connect_sqlite_dbpool("../tests/test.db").await.unwrap();
+        assert!(!pool.is_closed());
+    }
+
+    // 测试插入和查询好友
+    #[tokio::test]
+    async fn test_insert_and_select_friend() {
+        let pool = setup_test_db().await;
+
+        // 创建测试数据
+        let friend = Friends {
+            name: "测试用户".to_string(),
+            link: "https://example.com".to_string(),
+            error: false,
+            avatar: "https://example.com/avatar.jpg".to_string(),
+            created_at: SystemTime::now().elapsed().unwrap().as_secs().to_string(),
+        };
+
+        // 插入数据
+        insert_friend_table(&friend, &pool).await.unwrap();
+
+        // 查询数据
+        let friends = select_all_from_friends(&pool).await.unwrap();
+
+        // 验证结果
+        assert_eq!(friends.len(), 1);
+        assert_eq!(friends[0].name, "测试用户");
+        assert_eq!(friends[0].link, "https://example.com");
+        assert_eq!(friends[0].error, false);
+    }
+
+    // 测试插入和查询帖子
+    #[tokio::test]
+    async fn test_insert_and_select_post() {
+        let pool = setup_test_db().await;
+
+        // 创建测试数据
+        let meta = BasePosts {
+            title: "测试帖子".to_string(),
+            created: "2023-01-01".to_string(),
+            updated: "2023-01-01".to_string(),
+            link: "https://example.com/post".to_string(),
+            rule: "test".to_string(),
+        };
+
+        let post = Posts {
+            meta,
+            author: "测试作者".to_string(),
+            avatar: "https://example.com/avatar.jpg".to_string(),
+            created_at: SystemTime::now().elapsed().unwrap().as_secs().to_string(),
+        };
+
+        // 插入数据
+        insert_post_table(&post, &pool).await.unwrap();
+
+        // 查询数据
+        let posts = select_all_from_posts(&pool, 0, 0, "updated").await.unwrap();
+
+        // 验证结果
+        assert_eq!(posts.len(), 1);
+        assert_eq!(posts[0].meta.title, "测试帖子");
+        assert_eq!(posts[0].meta.link, "https://example.com/post");
+        assert_eq!(posts[0].author, "测试作者");
+    }
+
+    // 测试批量插入好友
+    #[tokio::test]
+    async fn test_bulk_insert_friends() {
+        let pool = setup_test_db().await;
+
+        // 创建测试数据
+        let friends = vec![
+            Friends {
+                name: "用户1".to_string(),
+                link: "https://example1.com".to_string(),
+                error: false,
+                avatar: "https://example1.com/avatar.jpg".to_string(),
+                created_at: SystemTime::now().elapsed().unwrap().as_secs().to_string(),
+            },
+            Friends {
+                name: "用户2".to_string(),
+                link: "https://example2.com".to_string(),
+                error: false,
+                avatar: "https://example2.com/avatar.jpg".to_string(),
+                created_at: SystemTime::now().elapsed().unwrap().as_secs().to_string(),
+            },
+        ];
+
+        // 批量插入
+        bulk_insert_friend_table(friends.into_iter(), &pool)
+            .await
+            .unwrap();
+
+        // 查询数据
+        let result = select_all_from_friends(&pool).await.unwrap();
+
+        // 验证结果
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|f| f.name == "用户1"));
+        assert!(result.iter().any(|f| f.name == "用户2"));
+    }
+
+    // 测试批量插入帖子
+    #[tokio::test]
+    async fn test_bulk_insert_posts() {
+        let pool = setup_test_db().await;
+
+        // 创建测试数据
+        let posts = vec![
+            Posts {
+                meta: BasePosts {
+                    title: "帖子1".to_string(),
+                    created: "2023-01-01".to_string(),
+                    updated: "2023-01-01".to_string(),
+                    link: "https://example.com/post1".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者1".to_string(),
+                avatar: "https://example.com/avatar1.jpg".to_string(),
+                created_at: "2023-01-01".to_string(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "帖子2".to_string(),
+                    created: "2023-01-02".to_string(),
+                    updated: "2023-01-02".to_string(),
+                    link: "https://example.com/post2".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者2".to_string(),
+                avatar: "https://example.com/avatar2.jpg".to_string(),
+                created_at: "2023-01-02".to_string(),
+            },
+        ];
+
+        // 批量插入
+        bulk_insert_post_table(posts.into_iter(), &pool)
+            .await
+            .unwrap();
+
+        // 查询数据
+        let result = select_all_from_posts(&pool, 0, 0, "updated").await.unwrap();
+
+        // 验证结果
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|p| p.meta.title == "帖子1"));
+        assert!(result.iter().any(|p| p.meta.title == "帖子2"));
+    }
+
+    // 测试查询带有特定链接的帖子
+    #[tokio::test]
+    async fn test_select_posts_with_linklike() {
+        let pool = setup_test_db().await;
+
+        // 插入测试数据
+        let posts = vec![
+            Posts {
+                meta: BasePosts {
+                    title: "帖子1".to_string(),
+                    created: "2023-01-01".to_string(),
+                    updated: "2023-01-01".to_string(),
+                    link: "https://example.com/post1".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者1".to_string(),
+                avatar: "https://example.com/avatar1.jpg".to_string(),
+                created_at: "2023-01-01".to_string(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "帖子2".to_string(),
+                    created: "2023-01-02".to_string(),
+                    updated: "2023-01-02".to_string(),
+                    link: "https://example.org/post2".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者2".to_string(),
+                avatar: "https://example.org/avatar2.jpg".to_string(),
+                created_at: "2023-01-02".to_string(),
+            },
+        ];
+
+        bulk_insert_post_table(posts.into_iter(), &pool)
+            .await
+            .unwrap();
+
+        // 查询特定链接的帖子
+        let result = select_all_from_posts_with_linklike(&pool, "example.com", -1, "updated")
+            .await
+            .unwrap();
+
+        // 验证结果
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].meta.title, "帖子1");
+
+        // 查询限制数量
+        let result = select_all_from_posts_with_linklike(&pool, "example", 1, "updated")
+            .await
+            .unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    // 测试查询带有特定链接的好友
+    #[tokio::test]
+    async fn test_select_friend_with_linklike() {
+        let pool = setup_test_db().await;
+
+        // 插入测试数据
+        let friends = vec![
+            Friends {
+                name: "用户1".to_string(),
+                link: "https://example.com".to_string(),
+                error: false,
+                avatar: "https://example.com/avatar.jpg".to_string(),
+                created_at: "2023-01-01".to_string(),
+            },
+            Friends {
+                name: "用户2".to_string(),
+                link: "https://example.org".to_string(),
+                error: false,
+                avatar: "https://example.org/avatar.jpg".to_string(),
+                created_at: "2023-01-02".to_string(),
+            },
+        ];
+
+        bulk_insert_friend_table(friends.into_iter(), &pool)
+            .await
+            .unwrap();
+
+        // 查询特定链接的好友
+        let result = select_one_from_friends_with_linklike(&pool, "example.com")
+            .await
+            .unwrap();
+
+        // 验证结果
+        assert_eq!(result.name, "用户1");
+    }
+
+    // 测试查询最新更新时间
+    #[tokio::test]
+    async fn test_select_latest_time() {
+        let pool = setup_test_db().await;
+
+        // 插入测试数据
+        let posts = vec![
+            Posts {
+                meta: BasePosts {
+                    title: "旧帖子".to_string(),
+                    created: "2023-01-01".to_string(),
+                    updated: "2023-01-01".to_string(),
+                    link: "https://example.com/post1".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者1".to_string(),
+                avatar: "https://example.com/avatar1.jpg".to_string(),
+                created_at: "2023-01-01".to_string(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "新帖子".to_string(),
+                    created: "2023-01-02".to_string(),
+                    updated: "2023-01-02".to_string(),
+                    link: "https://example.com/post2".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者2".to_string(),
+                avatar: "https://example.com/avatar2.jpg".to_string(),
+                created_at: "2023-01-02".to_string(),
+            },
+        ];
+
+        bulk_insert_post_table(posts.into_iter(), &pool)
+            .await
+            .unwrap();
+
+        // 查询最新更新时间
+        let latest_time = select_latest_time_from_posts(&pool).await.unwrap();
+
+        // 验证结果
+        assert!(latest_time == "2023-01-02" || latest_time == "2023-01-01");
+    }
+
+    // 测试清空表
+    #[tokio::test]
+    async fn test_truncate_table() {
+        let pool = setup_test_db().await;
+
+        // 插入测试数据
+        let friend = Friends {
+            name: "测试用户".to_string(),
+            link: "https://example.com".to_string(),
+            error: false,
+            avatar: "https://example.com/avatar.jpg".to_string(),
+            created_at: "2023-01-01".to_string(),
+        };
+
+        insert_friend_table(&friend, &pool).await.unwrap();
+
+        // 验证数据已插入
+        let friends = select_all_from_friends(&pool).await.unwrap();
+        assert_eq!(friends.len(), 1);
+
+        // 清空表
+        truncate_table(&pool, "friends").await.unwrap();
+
+        // 验证表已清空
+        let friends = select_all_from_friends(&pool).await.unwrap();
+        assert_eq!(friends.len(), 0);
+    }
+
+    // 测试清空好友表
+    #[tokio::test]
+    async fn test_truncate_friend_table() {
+        let pool = setup_test_db().await;
+
+        // 插入测试数据
+        let friend = Friends {
+            name: "测试用户".to_string(),
+            link: "https://example.com".to_string(),
+            error: false,
+            avatar: "https://example.com/avatar.jpg".to_string(),
+            created_at: "2023-01-01".to_string(),
+        };
+
+        insert_friend_table(&friend, &pool).await.unwrap();
+
+        // 验证数据已插入
+        let friends = select_all_from_friends(&pool).await.unwrap();
+        assert_eq!(friends.len(), 1);
+
+        // 清空好友表
+        truncate_friend_table(&pool).await.unwrap();
+
+        // 验证表已清空
+        let friends = select_all_from_friends(&pool).await.unwrap();
+        assert_eq!(friends.len(), 0);
+    }
+
+    // 测试删除过期帖子
+    #[tokio::test]
+    async fn test_delete_outdated_posts() {
+        let pool = setup_test_db().await;
+
+        // 插入测试数据 - 这里我们使用SQLite的日期函数来设置过期日期
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES ('过期帖子', '2020-01-01', date('now', '-10 days'), 'https://example.com/old', '作者', 'avatar.jpg', 'test', '2020-01-01')"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES ('新帖子', '2023-01-01', date('now'), 'https://example.com/new', '作者', 'avatar.jpg', 'test', '2023-01-01')"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // 删除过期帖子（7天前）
+        let deleted_count = delete_outdated_posts(7, &pool).await.unwrap();
+
+        // 验证结果
+        assert_eq!(deleted_count, 1);
+
+        // 验证剩余帖子
+        let posts = select_all_from_posts(&pool, 0, 0, "updated").await.unwrap();
+        assert_eq!(posts.len(), 1);
+        assert_eq!(posts[0].meta.link, "https://example.com/new");
+    }
 }
