@@ -109,7 +109,7 @@ async fn main() {
             let client = client.clone();
             let css_rules = css_rules.clone();
             let task = tokio::spawn(async move {
-                let format_base_posts = download::start_crawl_postpages(
+                let format_base_posts = match download::start_crawl_postpages(
                     base_post.link.clone(),
                     &fc_settings,
                     if postpage_vec.len() == 3 {
@@ -123,7 +123,13 @@ async fn main() {
                     &client,
                 )
                 .await
-                .unwrap();
+                {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("{}", e);
+                        return (base_post, vec![]);
+                    }
+                };
                 // info!("{:?}",format_base_posts);
                 (base_post, format_base_posts)
             });
@@ -157,7 +163,10 @@ async fn main() {
                     return;
                 }
             };
-            sqlite::truncate_friend_table(&dbpool).await.unwrap();
+            if let Err(e) = sqlite::truncate_friend_table(&dbpool).await {
+                error!("{}", e);
+                return;
+            }
             for mut crawl_res in all_res {
                 if crawl_res.1.len() > 0 {
                     let posts = crawl_res.1.iter().map(|post| {
@@ -168,22 +177,26 @@ async fn main() {
                             tools::strptime_to_string_ymdhms(now),
                         )
                     });
-                    sqlite::delete_post_table(posts.clone(), &dbpool)
-                        .await
-                        .unwrap();
-                    sqlite::bulk_insert_post_table(posts, &dbpool)
-                        .await
-                        .unwrap();
-                    sqlite::insert_friend_table(&crawl_res.0, &dbpool)
-                        .await
-                        .unwrap();
+                    if let Err(e) = sqlite::delete_post_table(posts.clone(), &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
+                    if let Err(e) = sqlite::bulk_insert_post_table(posts, &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
+                    if let Err(e) = sqlite::insert_friend_table(&crawl_res.0, &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
                     success_friends.push(crawl_res.0);
                     success_posts.push(crawl_res.1);
                 } else {
                     crawl_res.0.error = true;
-                    sqlite::insert_friend_table(&crawl_res.0, &dbpool)
-                        .await
-                        .unwrap();
+                    if let Err(e) = sqlite::insert_friend_table(&crawl_res.0, &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
                     failed_friends.push(crawl_res.0);
                 }
             }
@@ -197,8 +210,10 @@ async fn main() {
                         0
                     }
                 };
-            if let Err(e) = write_data_to_json(&dbpool).await {
-                info!("写入JSON数据失败: {}", e);
+            if fc_settings.simple_mode {
+                if let Err(e) = write_data_to_json(&dbpool).await {
+                    info!("写入JSON数据失败: {}", e);
+                }
             }
         }
         "mysql" => {
@@ -210,7 +225,13 @@ async fn main() {
                     return;
                 }
             };
-            let dbpool = mysql::connect_mysql_dbpool(&mysqlconnstr).await.unwrap();
+            let dbpool = match mysql::connect_mysql_dbpool(&mysqlconnstr).await {
+                Ok(dbpool) => dbpool,
+                Err(e) => {
+                    error!("{}", e);
+                    return;
+                }
+            };
             match sqlx::migrate!("../db/schema/mysql").run(&dbpool).await {
                 Ok(()) => (),
                 Err(e) => {
@@ -218,7 +239,10 @@ async fn main() {
                     return;
                 }
             };
-            mysql::truncate_friend_table(&dbpool).await.unwrap();
+            if let Err(e) = mysql::truncate_friend_table(&dbpool).await {
+                error!("{}", e);
+                return;
+            }
             for mut crawl_res in all_res {
                 if crawl_res.1.len() > 0 {
                     let posts = crawl_res.1.iter().map(|post| {
@@ -229,20 +253,26 @@ async fn main() {
                             tools::strptime_to_string_ymdhms(now),
                         )
                     });
-                    mysql::delete_post_table(posts.clone(), &dbpool)
-                        .await
-                        .unwrap();
-                    mysql::bulk_insert_post_table(posts, &dbpool).await.unwrap();
-                    mysql::insert_friend_table(&crawl_res.0, &dbpool)
-                        .await
-                        .unwrap();
+                    if let Err(e) = mysql::delete_post_table(posts.clone(), &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
+                    if let Err(e) = mysql::bulk_insert_post_table(posts, &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
+                    if let Err(e) = mysql::insert_friend_table(&crawl_res.0, &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
                     success_friends.push(crawl_res.0);
                     success_posts.push(crawl_res.1);
                 } else {
                     crawl_res.0.error = true;
-                    mysql::insert_friend_table(&crawl_res.0, &dbpool)
-                        .await
-                        .unwrap();
+                    if let Err(e) = mysql::insert_friend_table(&crawl_res.0, &dbpool).await {
+                        error!("{}", e);
+                        return;
+                    }
                     failed_friends.push(crawl_res.0);
                 }
             }
@@ -265,10 +295,17 @@ async fn main() {
                     return;
                 }
             };
-            let clientdb = mongodb::connect_mongodb_clientdb(&mongodburi)
-                .await
-                .unwrap();
-            mongodb::truncate_friend_table(&clientdb).await.unwrap();
+            let clientdb = match mongodb::connect_mongodb_clientdb(&mongodburi).await {
+                Ok(clientdb) => clientdb,
+                Err(e) => {
+                    error!("{}", e);
+                    return;
+                }
+            };
+            if let Err(e) = mongodb::truncate_friend_table(&clientdb).await {
+                error!("{}", e);
+                return;
+            }
             for mut crawl_res in all_res {
                 if crawl_res.1.len() > 0 {
                     let posts = crawl_res.1.iter().map(|post| {
@@ -279,22 +316,26 @@ async fn main() {
                             tools::strptime_to_string_ymdhms(now),
                         )
                     });
-                    mongodb::delete_post_table(posts.clone(), &clientdb)
-                        .await
-                        .unwrap();
-                    mongodb::bulk_insert_post_table(posts, &clientdb)
-                        .await
-                        .unwrap();
-                    mongodb::insert_friend_table(&crawl_res.0, &clientdb)
-                        .await
-                        .unwrap();
+                    if let Err(e) = mongodb::delete_post_table(posts.clone(), &clientdb).await {
+                        error!("{}", e);
+                        return;
+                    }
+                    if let Err(e) = mongodb::bulk_insert_post_table(posts, &clientdb).await {
+                        error!("{}", e);
+                        return;
+                    }
+                    if let Err(e) = mongodb::insert_friend_table(&crawl_res.0, &clientdb).await {
+                        error!("{}", e);
+                        return;
+                    }
                     success_friends.push(crawl_res.0);
                     success_posts.push(crawl_res.1);
                 } else {
                     crawl_res.0.error = true;
-                    mongodb::insert_friend_table(&crawl_res.0, &clientdb)
-                        .await
-                        .unwrap();
+                    if let Err(e) = mongodb::insert_friend_table(&crawl_res.0, &clientdb).await {
+                        error!("{}", e);
+                        return;
+                    }
                     failed_friends.push(crawl_res.0);
                 }
             }

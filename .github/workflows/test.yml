@@ -10,8 +10,8 @@ env:
   CARGO_TERM_COLOR: always
   # 在这里查看需要添加的secert
   # 通用配置
-  SIMPLE_MODE: false # 极简模式是否开启
-  DATABASE: ${{ secrets.DATABASE || 'sqlite' }} # 默认使用sqlite
+  SIMPLE_MODE: false # 极简模式是否开启，默认false
+  DATABASE: sqlite # 默认使用sqlite
   PROXY: ${{ secrets.PROXY }} # 可选，http代理
   # mysql、sqlite、mongodb配置三选一即可
   # mysql配置
@@ -78,6 +78,17 @@ jobs:
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
+      - name: Read Config Values
+        id: read_config
+        run: |
+          echo "Reading configuration from fc_settings.yaml"
+          DEPLOY_TYPE=$(grep "DEPLOY_TYPE:" fc_settings.yaml | awk '{print $2}')
+          DATABASE=$(grep "DATABASE:" fc_settings.yaml | awk '{print $2}')
+          SIMPLE_MODE=$(grep "SIMPLE_MODE:" fc_settings.yaml | awk '{print $2}')
+          echo "DEPLOY_TYPE=$DEPLOY_TYPE" >> $GITHUB_ENV
+          echo "DATABASE=$DATABASE" >> $GITHUB_ENV
+          echo "SIMPLE_MODE=$SIMPLE_MODE" >> $GITHUB_ENV
+          echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE, SIMPLE_MODE=$SIMPLE_MODE"
       - name: Run Core
         run: cargo run --bin core --release
 

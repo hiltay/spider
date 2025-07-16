@@ -116,6 +116,8 @@ pub mod config {
         pub database: String,
         #[serde(rename="DEPLOY_TYPE")]
         pub deploy_type: String,
+        #[serde(rename="SIMPLE_MODE")]
+        pub simple_mode: bool,
     }
 }
 
