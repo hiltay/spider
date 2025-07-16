@@ -1,9 +1,5 @@
 use data_structures::metadata::{self, Friends, Posts};
-use mongodb::{
-    bson::doc,
-    options::ClientOptions,
-    Client, Database,
-};
+use mongodb::{Client, Database, bson::doc, options::ClientOptions};
 
 pub async fn connect_mongodb_clientdb(
     mongodburi: &str,
@@ -69,7 +65,6 @@ pub async fn truncate_friend_table(db: &Database) -> Result<(), Box<dyn std::err
 
 #[cfg(test)]
 mod tests {
-    
 
     #[tokio::test]
     async fn internal() {

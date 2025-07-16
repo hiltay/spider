@@ -1,8 +1,5 @@
-
 use db::sqlite;
 use tracing::info;
-
-
 
 #[tokio::main]
 async fn main() {

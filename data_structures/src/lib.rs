@@ -104,19 +104,19 @@ pub mod config {
     pub struct Settings {
         #[serde(rename = "LINK")]
         pub link: Vec<LinkMeta>,
-        #[serde(rename="SETTINGS_FRIENDS_LINKS")]
+        #[serde(rename = "SETTINGS_FRIENDS_LINKS")]
         pub settings_friends_links: SettingsFriendsLinksMeta,
-        #[serde(rename="BLOCK_SITE")]
+        #[serde(rename = "BLOCK_SITE")]
         pub block_site: Vec<String>,
-        #[serde(rename="MAX_POSTS_NUM")]
+        #[serde(rename = "MAX_POSTS_NUM")]
         pub max_posts_num: usize,
-        #[serde(rename="OUTDATE_CLEAN")]
+        #[serde(rename = "OUTDATE_CLEAN")]
         pub outdate_clean: usize,
-        #[serde(rename="DATABASE")]
+        #[serde(rename = "DATABASE")]
         pub database: String,
-        #[serde(rename="DEPLOY_TYPE")]
+        #[serde(rename = "DEPLOY_TYPE")]
         pub deploy_type: String,
-        #[serde(rename="SIMPLE_MODE")]
+        #[serde(rename = "SIMPLE_MODE")]
         pub simple_mode: bool,
     }
 }

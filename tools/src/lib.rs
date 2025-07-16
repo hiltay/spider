@@ -115,15 +115,17 @@ pub fn get_env_var(var_name: &str) -> Result<String, Box<dyn std::error::Error>>
     match dotenvy::var(var_name) {
         Ok(var) => {
             if var.is_empty() {
-                Err(Box::new(std::io::Error::other(
-                    format!("{} is not set", var_name),
-                )))
+                Err(Box::new(std::io::Error::other(format!(
+                    "{} is not set",
+                    var_name
+                ))))
             } else {
                 Ok(var)
             }
         }
-        Err(_) => Err(Box::new(std::io::Error::other(
-            format!("{} is not set", var_name),
-        ))),
+        Err(_) => Err(Box::new(std::io::Error::other(format!(
+            "{} is not set",
+            var_name
+        )))),
     }
 }

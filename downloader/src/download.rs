@@ -225,9 +225,7 @@ pub async fn start_crawl_postpages(
             let base_url = base_url.clone();
             let feed_url = base_url.join(feed_suffix)?;
             joinset.spawn(async move {
-                match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client)
-                    .await
-                {
+                match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client).await {
                     Ok(v) => v,
                     Err(e) => {
                         trace!("{}", e);
