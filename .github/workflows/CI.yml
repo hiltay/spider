@@ -43,9 +43,19 @@ jobs:
   test-versions:
     needs: check
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql }}
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_DATABASE: pyq
+        options: -d
+        ports:
+          - 3306:3306
     strategy:
       matrix:
         rust: [stable, beta, nightly]
+        mysql: [8, 9, latest, lts]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
