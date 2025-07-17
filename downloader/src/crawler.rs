@@ -140,7 +140,7 @@ pub async fn crawl_post_page<'a>(
                 }
                 if !res.is_empty() {
                     // DEBUG:
-                    // debug!("{}-{}-{}-{}",use_theme, match_rule,attr,current_field);
+                    // debug!("{}-{}-{}-{}", use_theme, match_rule, attr, current_field);
                     if !result.contains_key(current_field) {
                         result.insert(current_field, res);
                     }

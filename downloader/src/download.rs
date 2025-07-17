@@ -2,7 +2,7 @@ use super::crawler;
 use chrono::Utc;
 use data_structures::{
     config::Settings,
-    metadata::{self},
+    metadata::{self, BasePosts},
 };
 use regex::Regex;
 use reqwest::{ClientBuilder as CL, Proxy};
@@ -14,6 +14,22 @@ use tokio::{self, task::JoinSet};
 use tools;
 use tracing::{error, info, trace, warn};
 use url::{ParseError, Url};
+
+async fn get_joinset_result(
+    joinset: &mut JoinSet<Vec<BasePosts>>,
+    base_url: &Url,
+) -> Result<Vec<BasePosts>, Box<dyn std::error::Error>> {
+    while let Some(res) = joinset.join_next().await {
+        if let Ok(success) = res
+            && !success.is_empty()
+        {
+            info!("{} 解析成功! 共{}条", base_url, success.len());
+            return Ok(success);
+        }
+    }
+    Err("css request failed".into())
+}
+
 /// 构建请求客户端
 pub fn build_client() -> ClientWithMiddleware {
     let timeout = Duration::new(20, 0);
@@ -107,6 +123,34 @@ pub async fn start_crawl_postpages(
         let css_rules = css_rules.clone();
         let client_: ClientWithMiddleware = client.clone();
         let base_url_ = base_url.clone();
+
+        for feed_suffix in [
+            "atom.xml",
+            "feed/atom",
+            "rss.xml",
+            "rss2.xml",
+            "feed",
+            "index.xml",
+            extra_feed_suffix.as_str(),
+        ] {
+            let client = client.clone();
+            let base_url = base_url.clone();
+            let feed_url = base_url.join(feed_suffix)?;
+            joinset.spawn(async move {
+                match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        trace!("{}", e);
+                        Vec::new()
+                    }
+                }
+            });
+        }
+
+        if let Ok(posts) = get_joinset_result(&mut joinset, &base_url).await {
+            info!("使用feed规则解析成功:{}", base_url);
+            return Ok(posts);
+        }
         joinset.spawn(async move {
             // 获取当前时间
             let mut download_postpage_res =
@@ -212,37 +256,13 @@ pub async fn start_crawl_postpages(
             }
             format_base_posts
         });
-        for feed_suffix in [
-            "atom.xml",
-            "feed/atom",
-            "rss.xml",
-            "rss2.xml",
-            "feed",
-            "index.xml",
-            extra_feed_suffix.as_str(),
-        ] {
-            let client = client.clone();
-            let base_url = base_url.clone();
-            let feed_url = base_url.join(feed_suffix)?;
-            joinset.spawn(async move {
-                match crawler::crawl_post_page_feed(feed_url.as_str(), &base_url, &client).await {
-                    Ok(v) => v,
-                    Err(e) => {
-                        trace!("{}", e);
-                        Vec::new()
-                    }
-                }
-            });
+        if let Ok(posts) = get_joinset_result(&mut joinset, &base_url).await {
+            info!("使用css规则解析成功:{}", base_url);
+            return Ok(posts);
+        } else {
+            info!("解析失败:{}", base_url);
+            Ok(Vec::new())
         }
-        while let Some(res) = joinset.join_next().await {
-            if let Ok(success) = res
-                && !success.is_empty()
-            {
-                info!("{} 解析成功! 共{}条", base_url, success.len());
-                return Ok(success);
-            }
-        }
-        Ok(Vec::new())
     } else {
         error!("css_rule 格式错误");
         panic!("css_rule 格式错误");

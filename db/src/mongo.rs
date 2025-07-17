@@ -1,3 +1,4 @@
+use chrono::{Duration, Local};
 use data_structures::metadata::{self, Friends, Posts};
 use futures::TryStreamExt;
 use mongodb::{
@@ -167,6 +168,21 @@ pub async fn select_all_from_posts_with_linklike(
 
     let posts = cursor.try_collect().await?;
     Ok(posts)
+}
+
+pub async fn delete_outdated_posts(days: usize, pool: &MongoDatabase) -> Result<usize, Error> {
+    let now = Local::now() - Duration::days(days as i64);
+    let collection = pool.collection::<Posts>("Posts");
+    let filter =
+        doc! { "updated": doc! {
+
+        }
+    };
+    collection.delete_many(doc! {}).;
+    let sql = "DELETE FROM posts WHERE DATE(updated) < DATE_SUB(CURDATE(), INTERVAL ? DAY)";
+    let affected_rows = query(sql).bind(days as i64).execute(dbpool).await?;
+
+    Ok(affected_rows.rows_affected() as usize)
 }
 
 #[cfg(test)]

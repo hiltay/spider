@@ -339,7 +339,14 @@ async fn main() {
             }
 
             // outdated posts cleanup
-            // TODO
+            affected_rows =
+                match mongo::delete_outdated_posts(fc_settings.outdate_clean, &dbpool).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("清理过期文章失败:{}", e);
+                        0
+                    }
+                };
             affected_rows = 0;
         }
         _ => return,
