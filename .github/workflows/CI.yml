@@ -66,7 +66,7 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets -- --test-threads=1
   build:
-    if: ${{ (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
+    if: ${{ github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' && (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
     needs: [check, test-versions]
     name: build and run core
     runs-on: ubuntu-latest
