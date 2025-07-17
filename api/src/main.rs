@@ -1,6 +1,6 @@
-use api_dependence::{mysql::mysqlapi, sqlite::sqliteapi};
+use api_dependence::{mongodb::mongodbapi, mysql::mysqlapi, sqlite::sqliteapi};
 use axum::{Router, routing::get};
-use db::{mysql, sqlite};
+use db::{mongo, mysql, sqlite};
 use tools::init_tracing;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
@@ -49,6 +49,27 @@ pub async fn create_mysql_app(conn_str: &str) -> Router {
         .layer(service)
 }
 
+async fn create_mongodb_app(mongodburi: &str) -> Router {
+    let cors = CorsLayer::new()
+        .allow_methods(Any)
+        .allow_origin(Any)
+        .allow_headers(Any);
+    let service = ServiceBuilder::new()
+        .layer(TraceLayer::new_for_http())
+        .layer(cors);
+
+    let clientdb = mongo::connect_mongodb_clientdb(mongodburi).await.unwrap();
+
+    Router::new()
+        .route("/all", get(mongodbapi::get_all))
+        .route("/friend", get(mongodbapi::get_friend))
+        .route("/post", get(mongodbapi::get_post))
+        .route("/randomfriend", get(mongodbapi::get_randomfriend))
+        .route("/randompost", get(mongodbapi::get_randompost))
+        .with_state(clientdb)
+        .layer(service)
+}
+
 #[tokio::main]
 async fn main() {
     let fc_settings = tools::get_yaml_settings("./fc_settings.yaml").unwrap();
@@ -67,7 +88,16 @@ async fn main() {
             };
             create_mysql_app(&mysqlconnstr).await
         }
-        // "mongodb" => {}
+        "mongodb" => {
+            let mongodburi = match tools::get_env_var("MONGODB_URI") {
+                Ok(mongodburi) => mongodburi,
+                Err(e) => {
+                    error!("{}", e);
+                    return;
+                }
+            };
+            create_mongodb_app(&mongodburi).await
+        }
         _ => return,
     };
 

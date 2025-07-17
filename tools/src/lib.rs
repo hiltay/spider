@@ -111,7 +111,7 @@ pub fn get_yaml_settings(path: &str) -> io::Result<config::Settings> {
 
 /// 获取环境变量，如果为空则返回错误
 pub fn get_env_var(var_name: &str) -> Result<String, Box<dyn std::error::Error>> {
-    dotenvy::dotenv()?;
+    dotenvy::dotenv_override()?;
     match dotenvy::var(var_name) {
         Ok(var) => {
             if var.is_empty() {

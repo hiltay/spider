@@ -3,7 +3,7 @@ use std::fs::File;
 use chrono::Utc;
 use data_structures::metadata::{self};
 use data_structures::response::AllPostData;
-use db::{SqlitePool, mongodb, mysql, sqlite};
+use db::{SqlitePool, mongo, mysql, sqlite};
 use downloader::download;
 use tokio::{self};
 use tracing::{error, info};
@@ -293,14 +293,14 @@ async fn main() {
                     return;
                 }
             };
-            let clientdb = match mongodb::connect_mongodb_clientdb(&mongodburi).await {
+            let clientdb = match mongo::connect_mongodb_clientdb(&mongodburi).await {
                 Ok(clientdb) => clientdb,
                 Err(e) => {
                     error!("{}", e);
                     return;
                 }
             };
-            if let Err(e) = mongodb::truncate_friend_table(&clientdb).await {
+            if let Err(e) = mongo::truncate_friend_table(&clientdb).await {
                 error!("{}", e);
                 return;
             }
@@ -314,15 +314,15 @@ async fn main() {
                             tools::strptime_to_string_ymdhms(now),
                         )
                     });
-                    if let Err(e) = mongodb::delete_post_table(posts.clone(), &clientdb).await {
+                    if let Err(e) = mongo::delete_post_table(posts.clone(), &clientdb).await {
                         error!("{}", e);
                         return;
                     }
-                    if let Err(e) = mongodb::bulk_insert_post_table(posts, &clientdb).await {
+                    if let Err(e) = mongo::bulk_insert_post_table(posts, &clientdb).await {
                         error!("{}", e);
                         return;
                     }
-                    if let Err(e) = mongodb::insert_friend_table(&crawl_res.0, &clientdb).await {
+                    if let Err(e) = mongo::insert_friend_table(&crawl_res.0, &clientdb).await {
                         error!("{}", e);
                         return;
                     }
@@ -330,7 +330,7 @@ async fn main() {
                     success_posts.push(crawl_res.1);
                 } else {
                     crawl_res.0.error = true;
-                    if let Err(e) = mongodb::insert_friend_table(&crawl_res.0, &clientdb).await {
+                    if let Err(e) = mongo::insert_friend_table(&crawl_res.0, &clientdb).await {
                         error!("{}", e);
                         return;
                     }

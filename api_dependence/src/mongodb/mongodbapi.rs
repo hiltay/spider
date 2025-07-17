@@ -8,16 +8,16 @@ use data_structures::{
     metadata::{Friends, Posts},
     response::{AllPostData, AllPostDataSomeFriend},
 };
-use db::{SqlitePool, sqlite};
+use db::{MongoDatabase, mongo};
 use rand::prelude::*;
 use url::Url;
 
 pub async fn get_all(
-    State(pool): State<SqlitePool>,
+    State(pool): State<MongoDatabase>,
     Query(params): Query<AllQueryParams>,
 ) -> Result<Json<AllPostData>, PYQError> {
     // println!("{:?}",params);
-    let posts = match sqlite::select_all_from_posts(
+    let posts = match mongo::select_all_from_posts(
         &pool,
         params.start.unwrap_or(0),
         params.end.unwrap_or(0),
@@ -29,12 +29,12 @@ pub async fn get_all(
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
 
-    let last_updated_time = match sqlite::select_latest_time_from_posts(&pool).await {
+    let last_updated_time = match mongo::select_latest_time_from_posts(&pool).await {
         Ok(v) => v,
-        Err(_e) => "1970-01-01 00:00:00".to_string(),
+        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
 
-    let friends = match sqlite::select_all_from_friends(&pool).await {
+    let friends = match mongo::select_all_from_friends(&pool).await {
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
@@ -60,8 +60,8 @@ pub async fn get_all(
     Ok(Json(data))
 }
 
-pub async fn get_friend(State(pool): State<SqlitePool>) -> Result<Json<Vec<Friends>>, PYQError> {
-    let friends = match sqlite::select_all_from_friends(&pool).await {
+pub async fn get_friend(State(pool): State<MongoDatabase>) -> Result<Json<Vec<Friends>>, PYQError> {
+    let friends = match mongo::select_all_from_friends(&pool).await {
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
@@ -70,7 +70,7 @@ pub async fn get_friend(State(pool): State<SqlitePool>) -> Result<Json<Vec<Frien
 }
 
 pub async fn get_post(
-    State(pool): State<SqlitePool>,
+    State(pool): State<MongoDatabase>,
     Query(params): Query<PostParams>,
 ) -> Result<Json<AllPostDataSomeFriend>, PYQError> {
     let friend = match params.link {
@@ -84,14 +84,14 @@ pub async fn get_post(
             };
             // println!("{}", domain_str);
 
-            match sqlite::select_one_from_friends_with_linklike(&pool, &domain_str).await {
+            match mongo::select_one_from_friends_with_linklike(&pool, &domain_str).await {
                 Ok(v) => v,
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
             }
         }
         None => {
             // 没有提供link，则随机获取一个friend
-            let friends = match sqlite::select_all_from_friends(&pool).await {
+            let friends = match mongo::select_all_from_friends(&pool).await {
                 Ok(v) => v,
                 Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
             };
@@ -106,7 +106,7 @@ pub async fn get_post(
             }
         }
     };
-    let posts = match sqlite::select_all_from_posts_with_linklike(
+    let posts = match mongo::select_all_from_posts_with_linklike(
         &pool,
         &friend.link,
         params.num.unwrap_or(-1),
@@ -129,10 +129,10 @@ pub async fn get_post(
 }
 
 pub async fn get_randomfriend(
-    State(pool): State<SqlitePool>,
+    State(pool): State<MongoDatabase>,
     Query(params): Query<RandomQueryParams>,
 ) -> Result<Json<Vec<Friends>>, PYQError> {
-    let friends = match sqlite::select_all_from_friends(&pool).await {
+    let friends = match mongo::select_all_from_friends(&pool).await {
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
@@ -146,10 +146,10 @@ pub async fn get_randomfriend(
 }
 
 pub async fn get_randompost(
-    State(pool): State<SqlitePool>,
+    State(pool): State<MongoDatabase>,
     Query(params): Query<RandomQueryParams>,
 ) -> Result<Json<Vec<Posts>>, PYQError> {
-    let posts = match sqlite::select_all_from_posts(&pool, 0, 0, "updated").await {
+    let posts = match mongo::select_all_from_posts(&pool, 0, 0, "updated").await {
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };

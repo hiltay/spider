@@ -3,23 +3,14 @@ use axum::{
     Json,
     extract::{Query, State},
 };
+use data_structures::query_params::{AllQueryParams, PostParams, RandomQueryParams};
 use data_structures::{
     metadata::{Friends, Posts},
     response::{AllPostData, AllPostDataSomeFriend},
 };
 use db::{MySqlPool, mysql};
 use rand::prelude::*;
-use serde::Deserialize;
 use url::Url;
-
-#[derive(Debug, Deserialize)]
-pub struct AllQueryParams {
-    #[serde(default)]
-    start: Option<usize>,
-    end: Option<usize>,
-    #[serde(rename(deserialize = "rule"))]
-    sort_rule: Option<String>,
-}
 
 pub async fn get_all(
     State(pool): State<MySqlPool>,
@@ -40,7 +31,7 @@ pub async fn get_all(
 
     let last_updated_time = match mysql::select_latest_time_from_posts(&pool).await {
         Ok(v) => v,
-        Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
+        Err(_e) => "1970-01-01 00:00:00".to_string(),
     };
 
     let friends = match mysql::select_all_from_friends(&pool).await {
@@ -76,14 +67,6 @@ pub async fn get_friend(State(pool): State<MySqlPool>) -> Result<Json<Vec<Friend
     };
 
     Ok(Json(friends))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PostParams {
-    link: Option<String>,
-    num: Option<i32>,
-    #[serde(rename(deserialize = "rule"))]
-    sort_rule: Option<String>,
 }
 
 pub async fn get_post(
@@ -145,10 +128,6 @@ pub async fn get_post(
     Ok(Json(data))
 }
 
-#[derive(Debug, Deserialize)]
-pub struct RandomQueryParams {
-    num: Option<usize>,
-}
 pub async fn get_randomfriend(
     State(pool): State<MySqlPool>,
     Query(params): Query<RandomQueryParams>,

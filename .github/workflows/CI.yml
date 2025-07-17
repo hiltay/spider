@@ -53,10 +53,18 @@ jobs:
           MYSQL_DATABASE: pyq
         ports:
           - 3306:3306
+      mongodb:
+        image: mongodb/mongodb-community-server:${{ matrix.mongodb }}
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: 123456
+        ports:
+          - 27017:27017
     strategy:
       matrix:
         rust: [stable, beta, nightly]
         mysql: [8, 8.4, 9, 9.3, latest, lts]
+        mongodb: [latest]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master

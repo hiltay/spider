@@ -1,3 +1,27 @@
+pub mod query_params {
+    use serde::Deserialize;
+    #[derive(Debug, Deserialize)]
+    pub struct AllQueryParams {
+        pub start: Option<usize>,
+        pub end: Option<usize>,
+        #[serde(rename(deserialize = "rule"))]
+        pub sort_rule: Option<String>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct PostParams {
+        pub link: Option<String>,
+        pub num: Option<i32>,
+        #[serde(rename(deserialize = "rule"))]
+        pub sort_rule: Option<String>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct RandomQueryParams {
+        pub num: Option<usize>,
+    }
+}
+
 /// 包含基本数据结构定义
 pub mod metadata {
     use serde::{Deserialize, Serialize};
@@ -10,7 +34,8 @@ pub mod metadata {
         pub created: String,
         pub updated: String,
         pub link: String,
-        #[serde(skip_serializing)]
+        // #[serde(skip_serializing)]
+        // #[serde(default)]
         pub rule: String,
     }
 
