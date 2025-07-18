@@ -128,15 +128,15 @@ jobs:
         with:
           name: ${{matrix.runner}}-${{matrix.target}}-fcircle
           path: |
-            target/release/core
-            target/release/api
+            target/${{ matrix.target }}/release/core
+            target/${{ matrix.target }}/release/api
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{github.ref_name}}
           files: |
-            target/release/core
-            target/release/api
+            target/${{ matrix.target }}/release/core
+            target/${{ matrix.target }}/release/api
 
   # build:
   #   if: ${{ github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' && (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
