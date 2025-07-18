@@ -83,10 +83,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: linux-x86_64-unknown-linux-musl
-            runner: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            command: cross
           - name: linux-x86_64-unknown-linux-gnu
             runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -99,11 +95,11 @@ jobs:
             runner: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             command: cross
-          - name: linux-arm64
+          - name: win-x86_64-pc-windows-gnu
             runner: ubuntu-latest
-            target: aarch64-unknown-linux-musl
+            target: x86_64-pc-windows-gnu
             command: cross
-          - name: win-x86_64
+          - name: win-x86_64-pc-windows-msvc
             runner: windows-latest
             target: x86_64-pc-windows-msvc
             command: cargo
