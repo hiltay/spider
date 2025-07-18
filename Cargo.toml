@@ -13,7 +13,11 @@ resolver = "2"
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-reqwest = { version = "0.12", features = ["json", "rustls-tls-native-roots"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls-native-roots",
+    "rustls-tls",
+] }
 reqwest-middleware = "0.4.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
