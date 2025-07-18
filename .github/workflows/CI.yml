@@ -74,7 +74,7 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets -- --test-threads=1
 
-  build-and_release:
+  build-and-release:
     if: ${{  (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
     needs: [check, test-versions]
     runs-on: ${{ matrix.runner }} # 定义作业运行的操作系统
@@ -123,20 +123,22 @@ jobs:
       - name: Build
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
 
+      - name: Package binaries
+        run: |
+          mkdir -p dist
+          zip -j dist/${{ matrix.name }}.zip target/${{ matrix.target }}/release/core target/${{ matrix.target }}/release/api
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{matrix.runner}}-${{matrix.target}}-fcircle
-          path: |
-            target/${{ matrix.target }}/release/core
-            target/${{ matrix.target }}/release/api
+          name: ${{ matrix.name }}-fcircle
+          path: dist/${{ matrix.name }}.zip
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{github.ref_name}}
-          files: |
-            target/${{ matrix.target }}/release/core
-            target/${{ matrix.target }}/release/api
+          name: ${{ github.ref_name }}
+          files: dist/${{ matrix.name }}.zip
 
   # build:
   #   if: ${{ github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' && (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
