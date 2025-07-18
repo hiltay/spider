@@ -77,7 +77,7 @@ jobs:
         run: cargo test --workspace --all-features --all-targets -- --test-threads=1
 
   build-and-release:
-    if: ${{ github.ref_type == 'tag' }}
+    # if: ${{ github.ref_type == 'tag' }}
     needs: [check, test-versions]
     runs-on: ${{ matrix.runner }} # 定义作业运行的操作系统
     strategy:
@@ -87,13 +87,21 @@ jobs:
             runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             command: cargo
+          - name: linux-x86_64-unknown-linux-musl
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            command: cargo
           - name: linux-i686
             runner: ubuntu-latest
             target: i686-unknown-linux-gnu
             command: cross
-          - name: linux-arm64
+          - name: linux-aarch64-unknown-linux-gnu
             runner: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            command: cross
+          - name: linux-aarch64-unknown-linux-musl
+            runner: ubuntu-latest
+            target: aarch64-unknown-linux-musl
             command: cross
           - name: win-x86_64-pc-windows-gnu
             runner: ubuntu-latest
@@ -103,11 +111,11 @@ jobs:
             runner: windows-latest
             target: x86_64-pc-windows-msvc
             command: cargo
-          - name: macos-x86_64
+          - name: macos-x86_64-apple-darwin
             runner: macos-latest
             target: x86_64-apple-darwin
             command: cargo
-          - name: macos-aarch64
+          - name: macos-aarch64-apple-darwin
             runner: macos-latest
             target: aarch64-apple-darwin
             command: cargo
@@ -148,11 +156,11 @@ jobs:
           name: ${{ matrix.name }}-fcircle
           path: dist/${{ matrix.name }}.zip
 
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          files: dist/${{ matrix.name }}.zip
+      # - name: Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     name: ${{ github.ref_name }}
+      #     files: dist/${{ matrix.name }}.zip
 
   build-and-run-core:
     if: ${{ github.ref_type != 'tag' &&github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' && (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
