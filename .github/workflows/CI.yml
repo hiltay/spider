@@ -88,9 +88,9 @@ jobs:
             target: x86_64-unknown-linux-gnu
             command: cargo
           - name: linux-x86_64-unknown-linux-musl
-            runner: ubuntu-latest
+            runner: macos-latest
             target: x86_64-unknown-linux-musl
-            command: cargo
+            command: cross
           - name: linux-i686-unknown-linux-gnu
             runner: ubuntu-latest
             target: i686-unknown-linux-gnu
