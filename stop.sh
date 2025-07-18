@@ -13,7 +13,7 @@ echo -e "${BLUE}=====================================${NC}"
 
 # 1. 停止API服务
 echo -e "${YELLOW}正在停止API服务...${NC}"
-api_pid=$(ps aux | grep "./api" | grep -v grep | awk '{print $2}')
+api_pid=$(ps aux | grep "./fcircle_api" | grep -v grep | awk '{print $2}')
 
 if [ -z "$api_pid" ]; then
     echo -e "${BLUE}未发现正在运行的API服务${NC}"
@@ -39,12 +39,12 @@ fi
 
 # 2. 清理crontab配置
 echo -e "${YELLOW}正在清理定时任务配置...${NC}"
-existing_cron=$(crontab -l 2>/dev/null | grep -F "./core")
+existing_cron=$(crontab -l 2>/dev/null | grep -F "./fcircle_core")
 if [ -z "$existing_cron" ]; then
     echo -e "${BLUE}未发现相关定时任务${NC}"
 else
-    # 删除包含./core的行
-    crontab -l 2>/dev/null | grep -v "./core" | crontab -
+    # 删除包含./fcircle_core的行
+    crontab -l 2>/dev/null | grep -v "./fcircle_core" | crontab -
     echo -e "${GREEN}成功清理定时任务${NC}"
 fi
 

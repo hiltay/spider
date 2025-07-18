@@ -83,7 +83,7 @@ fi
 
 # 5. 运行api并后台运行，不重定向输出
 echo -e "${YELLOW}启动API服务...${NC}"
-nohup ./fcircle_api &
+nohup ./fcircle_api >/dev/null 2>&1 &
 api_pid=$!
 
 # 等待一下确认API是否成功启动
