@@ -19,3 +19,8 @@ tracing.workspace = true
 
 [dev-dependencies]
 axum-test = "*"
+
+
+[[bin]]
+name = "fcircle_api"
+path = "src/main.rs"

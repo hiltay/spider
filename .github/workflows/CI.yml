@@ -129,13 +129,13 @@ jobs:
         if: ${{ runner.os != 'Windows' }}
         run: |
           mkdir -p dist
-          zip -j dist/${{ matrix.name }}.zip target/${{ matrix.target }}/release/core target/${{ matrix.target }}/release/api
+          zip -j dist/${{ matrix.name }}.zip target/${{ matrix.target }}/release/fcircle_core target/${{ matrix.target }}/release/fcircle_api
 
       - name: Package binaries (Windows)
         if: ${{ runner.os == 'Windows' }}
         run: |
           mkdir dist
-          Compress-Archive -Path "target\${{ matrix.target }}\release\core.exe","target\${{ matrix.target }}\release\api.exe" -DestinationPath "dist\${{ matrix.name }}.zip"
+          Compress-Archive -Path "target\${{ matrix.target }}\release\fcircle_core.exe","target\${{ matrix.target }}\release\fcircle_api.exe" -DestinationPath "dist\${{ matrix.name }}.zip"
         shell: pwsh
 
       - name: Upload artifact
@@ -173,7 +173,7 @@ jobs:
           echo "SIMPLE_MODE=$SIMPLE_MODE" >> $GITHUB_ENV
           echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE, SIMPLE_MODE=$SIMPLE_MODE"
       - name: Run Core
-        run: cargo run --bin core --release
+        run: cargo run --bin fcircle_core --release
       - name: Debug Environment
         run: |
           echo "DATABASE value: ${{ env.DATABASE }}"
