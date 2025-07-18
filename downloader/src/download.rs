@@ -258,7 +258,7 @@ pub async fn start_crawl_postpages(
         });
         if let Ok(posts) = get_joinset_result(&mut joinset, &base_url).await {
             info!("使用css规则解析成功:{}", base_url);
-            return Ok(posts);
+            Ok(posts)
         } else {
             info!("解析失败:{}", base_url);
             Ok(Vec::new())

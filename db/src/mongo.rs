@@ -170,19 +170,12 @@ pub async fn select_all_from_posts_with_linklike(
     Ok(posts)
 }
 
-pub async fn delete_outdated_posts(days: usize, pool: &MongoDatabase) -> Result<usize, Error> {
+pub async fn delete_outdated_posts(days: usize, clientdb: &MongoDatabase) -> Result<usize, Error> {
     let now = Local::now() - Duration::days(days as i64);
-    let collection = pool.collection::<Posts>("Posts");
-    let filter =
-        doc! { "updated": doc! {
-
-        }
-    };
-    collection.delete_many(doc! {}).;
-    let sql = "DELETE FROM posts WHERE DATE(updated) < DATE_SUB(CURDATE(), INTERVAL ? DAY)";
-    let affected_rows = query(sql).bind(days as i64).execute(dbpool).await?;
-
-    Ok(affected_rows.rows_affected() as usize)
+    let collection = clientdb.collection::<Posts>("Posts");
+    let filter = doc! { "updated": doc! { "$lt": now.format("%Y-%m-%d").to_string() } };
+    let result = collection.delete_many(filter).await?;
+    Ok(result.deleted_count as usize)
 }
 
 #[cfg(test)]
@@ -654,5 +647,218 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result.len(), 1);
+    }
+
+    // 测试删除过期帖子
+    #[tokio::test]
+    async fn test_delete_outdated_posts() {
+        let db = setup_test_db().await;
+
+        // 获取当前时间
+        let now = Local::now();
+        let today = now.format("%Y-%m-%d").to_string();
+        let yesterday = (now - Duration::days(1)).format("%Y-%m-%d").to_string();
+        let old_date = (now - Duration::days(35)).format("%Y-%m-%d").to_string();
+
+        // 创建测试数据 - 包含不同更新时间的帖子
+        let posts = vec![
+            Posts {
+                meta: BasePosts {
+                    title: "新帖子".to_string(),
+                    created: today.clone(),
+                    updated: today.clone(), // 今天的帖子
+                    link: "https://example.com/post1".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者1".to_string(),
+                avatar: "https://example.com/avatar1.jpg".to_string(),
+                created_at: today.clone(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "旧帖子1".to_string(),
+                    created: yesterday.clone(),
+                    updated: yesterday.clone(), // 昨天的帖子
+                    link: "https://example.com/post2".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者2".to_string(),
+                avatar: "https://example.com/avatar2.jpg".to_string(),
+                created_at: yesterday.clone(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "旧帖子2".to_string(),
+                    created: old_date.clone(),
+                    updated: old_date.clone(), // 35天前的帖子
+                    link: "https://example.com/post3".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者3".to_string(),
+                avatar: "https://example.com/avatar3.jpg".to_string(),
+                created_at: old_date.clone(),
+            },
+        ];
+
+        // 批量插入测试数据
+        bulk_insert_post_table(posts.into_iter(), &db)
+            .await
+            .unwrap();
+
+        // 验证初始数据数量
+        let initial_count = db
+            .collection::<Posts>("Posts")
+            .count_documents(doc! {})
+            .await
+            .unwrap();
+        assert_eq!(initial_count, 3);
+
+        // 删除30天前的过期帖子
+        let deleted_count = delete_outdated_posts(30, &db).await.unwrap();
+
+        // 验证删除结果 - 应该删除1个旧帖子（35天前的）
+        assert_eq!(deleted_count, 1);
+
+        // 验证剩余数据
+        let remaining_posts = select_all_from_posts(&db, 0, 0, "created_at")
+            .await
+            .unwrap();
+
+        // 应该剩下2个帖子（今天和昨天的）
+        assert_eq!(remaining_posts.len(), 2);
+        assert!(remaining_posts.iter().any(|p| p.meta.title == "新帖子"));
+        assert!(remaining_posts.iter().any(|p| p.meta.title == "旧帖子1"));
+    }
+
+    // 测试删除过期帖子 - 边界情况：没有过期帖子
+    #[tokio::test]
+    async fn test_delete_outdated_posts_no_outdated() {
+        let db = setup_test_db().await;
+
+        // 获取当前时间
+        let now = Local::now();
+        let today = now.format("%Y-%m-%d").to_string();
+        let yesterday = (now - Duration::days(1)).format("%Y-%m-%d").to_string();
+
+        // 创建测试数据 - 只包含最近的帖子
+        let posts = vec![
+            Posts {
+                meta: BasePosts {
+                    title: "新帖子1".to_string(),
+                    created: today.clone(),
+                    updated: today.clone(),
+                    link: "https://example.com/post1".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者1".to_string(),
+                avatar: "https://example.com/avatar1.jpg".to_string(),
+                created_at: today.clone(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "新帖子2".to_string(),
+                    created: yesterday.clone(),
+                    updated: yesterday.clone(),
+                    link: "https://example.com/post2".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者2".to_string(),
+                avatar: "https://example.com/avatar2.jpg".to_string(),
+                created_at: yesterday.clone(),
+            },
+        ];
+
+        // 批量插入测试数据
+        bulk_insert_post_table(posts.into_iter(), &db)
+            .await
+            .unwrap();
+
+        // 验证初始数据数量
+        let initial_count = db
+            .collection::<Posts>("Posts")
+            .count_documents(doc! {})
+            .await
+            .unwrap();
+        assert_eq!(initial_count, 2);
+
+        // 删除30天前的过期帖子（应该没有过期帖子）
+        let deleted_count = delete_outdated_posts(30, &db).await.unwrap();
+
+        // 验证删除结果 - 应该删除0个帖子
+        assert_eq!(deleted_count, 0);
+
+        // 验证数据没有变化
+        let remaining_posts = select_all_from_posts(&db, 0, 0, "created_at")
+            .await
+            .unwrap();
+
+        // 应该还有2个帖子
+        assert_eq!(remaining_posts.len(), 2);
+    }
+
+    // 测试删除过期帖子 - 边界情况：删除所有帖子
+    #[tokio::test]
+    async fn test_delete_outdated_posts_all_outdated() {
+        let db = setup_test_db().await;
+
+        // 获取当前时间
+        let now = Local::now();
+        let old_date1 = (now - Duration::days(35)).format("%Y-%m-%d").to_string();
+        let old_date2 = (now - Duration::days(40)).format("%Y-%m-%d").to_string();
+
+        // 创建测试数据 - 只包含很旧的帖子
+        let posts = vec![
+            Posts {
+                meta: BasePosts {
+                    title: "旧帖子1".to_string(),
+                    created: old_date1.clone(),
+                    updated: old_date1.clone(),
+                    link: "https://example.com/post1".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者1".to_string(),
+                avatar: "https://example.com/avatar1.jpg".to_string(),
+                created_at: old_date1.clone(),
+            },
+            Posts {
+                meta: BasePosts {
+                    title: "旧帖子2".to_string(),
+                    created: old_date2.clone(),
+                    updated: old_date2.clone(),
+                    link: "https://example.com/post2".to_string(),
+                    rule: "test".to_string(),
+                },
+                author: "作者2".to_string(),
+                avatar: "https://example.com/avatar2.jpg".to_string(),
+                created_at: old_date2.clone(),
+            },
+        ];
+
+        // 批量插入测试数据
+        bulk_insert_post_table(posts.into_iter(), &db)
+            .await
+            .unwrap();
+
+        // 验证初始数据数量
+        let initial_count = db
+            .collection::<Posts>("Posts")
+            .count_documents(doc! {})
+            .await
+            .unwrap();
+        assert_eq!(initial_count, 2);
+
+        // 删除30天前的过期帖子（应该删除所有帖子）
+        let deleted_count = delete_outdated_posts(30, &db).await.unwrap();
+
+        // 验证删除结果 - 应该删除2个帖子
+        assert_eq!(deleted_count, 2);
+
+        // 验证所有数据都被删除
+        let remaining_posts = select_all_from_posts(&db, 0, 0, "created_at")
+            .await
+            .unwrap();
+
+        // 应该没有剩余帖子
+        assert_eq!(remaining_posts.len(), 0);
     }
 }

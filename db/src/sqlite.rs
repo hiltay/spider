@@ -586,37 +586,178 @@ mod tests {
         assert_eq!(friends.len(), 0);
     }
 
-    // 测试删除过期帖子
+    // 测试删除过期帖子 - 只删除部分过期
     #[tokio::test]
-    async fn test_delete_outdated_posts() {
+    async fn test_delete_outdated_posts_partial() {
         let pool = setup_test_db().await;
 
-        // 插入测试数据 - 这里我们使用SQLite的日期函数来设置过期日期
+        use chrono::{Duration, Local};
+        let now = Local::now();
+        let today = now.format("%Y-%m-%d").to_string();
+        let yesterday = (now - Duration::days(1)).format("%Y-%m-%d").to_string();
+        let old_date = (now - Duration::days(35)).format("%Y-%m-%d").to_string();
+
+        // 插入三条数据：今天、昨天、35天前
         sqlx::query(
             "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
-             VALUES ('过期帖子', '2020-01-01', date('now', '-10 days'), 'https://example.com/old', '作者', 'avatar.jpg', 'test', '2020-01-01')"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
+        .bind("新帖子")
+        .bind(&today)
+        .bind(&today)
+        .bind("https://example.com/post1")
+        .bind("作者1")
+        .bind("avatar1.jpg")
+        .bind("test")
+        .bind(&today)
         .execute(&pool)
         .await
         .unwrap();
 
         sqlx::query(
             "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
-             VALUES ('新帖子', '2023-01-01', date('now'), 'https://example.com/new', '作者', 'avatar.jpg', 'test', '2023-01-01')"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
+        .bind("旧帖子1")
+        .bind(&yesterday)
+        .bind(&yesterday)
+        .bind("https://example.com/post2")
+        .bind("作者2")
+        .bind("avatar2.jpg")
+        .bind("test")
+        .bind(&yesterday)
         .execute(&pool)
         .await
         .unwrap();
 
-        // 删除过期帖子（7天前）
-        let deleted_count = delete_outdated_posts(7, &pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind("旧帖子2")
+        .bind(&old_date)
+        .bind(&old_date)
+        .bind("https://example.com/post3")
+        .bind("作者3")
+        .bind("avatar3.jpg")
+        .bind("test")
+        .bind(&old_date)
+        .execute(&pool)
+        .await
+        .unwrap();
 
-        // 验证结果
+        // 删除30天前的过期帖子
+        let deleted_count = delete_outdated_posts(30, &pool).await.unwrap();
         assert_eq!(deleted_count, 1);
 
-        // 验证剩余帖子
+        // 剩下2条
         let posts = select_all_from_posts(&pool, 0, 0, "updated").await.unwrap();
-        assert_eq!(posts.len(), 1);
-        assert_eq!(posts[0].meta.link, "https://example.com/new");
+        assert_eq!(posts.len(), 2);
+        assert!(posts.iter().any(|p| p.meta.title == "新帖子"));
+        assert!(posts.iter().any(|p| p.meta.title == "旧帖子1"));
+    }
+
+    // 测试删除过期帖子 - 没有过期
+    #[tokio::test]
+    async fn test_delete_outdated_posts_no_outdated() {
+        let pool = setup_test_db().await;
+
+        use chrono::{Duration, Local};
+        let now = Local::now();
+        let today = now.format("%Y-%m-%d").to_string();
+        let yesterday = (now - Duration::days(1)).format("%Y-%m-%d").to_string();
+
+        // 插入两条数据：今天、昨天
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind("新帖子1")
+        .bind(&today)
+        .bind(&today)
+        .bind("https://example.com/post1")
+        .bind("作者1")
+        .bind("avatar1.jpg")
+        .bind("test")
+        .bind(&today)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind("新帖子2")
+        .bind(&yesterday)
+        .bind(&yesterday)
+        .bind("https://example.com/post2")
+        .bind("作者2")
+        .bind("avatar2.jpg")
+        .bind("test")
+        .bind(&yesterday)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // 删除30天前的过期帖子
+        let deleted_count = delete_outdated_posts(30, &pool).await.unwrap();
+        assert_eq!(deleted_count, 0);
+
+        // 剩下2条
+        let posts = select_all_from_posts(&pool, 0, 0, "updated").await.unwrap();
+        assert_eq!(posts.len(), 2);
+    }
+
+    // 测试删除过期帖子 - 全部过期
+    #[tokio::test]
+    async fn test_delete_outdated_posts_all_outdated() {
+        let pool = setup_test_db().await;
+
+        use chrono::{Duration, Local};
+        let now = Local::now();
+        let old_date1 = (now - Duration::days(35)).format("%Y-%m-%d").to_string();
+        let old_date2 = (now - Duration::days(40)).format("%Y-%m-%d").to_string();
+
+        // 插入两条数据：35天前、40天前
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind("旧帖子1")
+        .bind(&old_date1)
+        .bind(&old_date1)
+        .bind("https://example.com/post1")
+        .bind("作者1")
+        .bind("avatar1.jpg")
+        .bind("test")
+        .bind(&old_date1)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO posts (title, created, updated, link, author, avatar, rule, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind("旧帖子2")
+        .bind(&old_date2)
+        .bind(&old_date2)
+        .bind("https://example.com/post2")
+        .bind("作者2")
+        .bind("avatar2.jpg")
+        .bind("test")
+        .bind(&old_date2)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // 删除30天前的过期帖子
+        let deleted_count = delete_outdated_posts(30, &pool).await.unwrap();
+        assert_eq!(deleted_count, 2);
+
+        // 剩下0条
+        let posts = select_all_from_posts(&pool, 0, 0, "updated").await.unwrap();
+        assert_eq!(posts.len(), 0);
     }
 }
