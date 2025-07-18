@@ -126,16 +126,16 @@ jobs:
         run: ${{ matrix.command }} build --release --target ${{ matrix.target }}
 
       - name: Package binaries (Linux/macOS)
-        if: ${{ matrix.runner.os != 'Windows' }}
+        if: ${{ runner.os != 'Windows' }}
         run: |
           mkdir -p dist
           zip -j dist/${{ matrix.name }}.zip target/${{ matrix.target }}/release/core target/${{ matrix.target }}/release/api
 
       - name: Package binaries (Windows)
-        if: ${{ matrix.runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' }}
         run: |
           mkdir dist
-          Compress-Archive -Path target\${{ matrix.target }}\release\core.exe,target\${{ matrix.target }}\release\api.exe -DestinationPath dist\${{ matrix.name }}.zip
+          Compress-Archive -Path "target\${{ matrix.target }}\release\core.exe","target\${{ matrix.target }}\release\api.exe" -DestinationPath "dist\${{ matrix.name }}.zip"
         shell: pwsh
 
       - name: Upload artifact
