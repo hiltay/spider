@@ -50,8 +50,8 @@ echo -e "${YELLOW}检查二进制程序...${NC}"
 # curl -L https://github.com/username/repo/releases/download/${latest_release}/api -o api
 
 # 检查二进制文件是否存在
-if [ ! -f "./core" ] || [ ! -f "./api" ]; then
-    echo -e "${RED}错误: 找不到二进制文件 core 或 api${NC}"
+if [ ! -f "./fcircle_core" ] || [ ! -f "./fcircle_api" ]; then
+    echo -e "${RED}错误: 找不到二进制文件 fcircle_core 或 fcircle_api${NC}"
     exit 1
 fi
 
@@ -62,10 +62,10 @@ chmod +x ./api
 # 4. 设置定时任务并立即运行core
 echo -e "${YELLOW}设置定时任务...${NC}"
 # 检查是否已存在相同的定时任务
-existing_cron=$(crontab -l 2>/dev/null | grep -F "./core")
+existing_cron=$(crontab -l 2>/dev/null | grep -F "./fcircle_core")
 if [ -z "$existing_cron" ]; then
     # 添加到crontab，不重定向输出
-    (crontab -l 2>/dev/null; echo "$cron_expr cd $(pwd) && ./core") | crontab -
+    (crontab -l 2>/dev/null; echo "$cron_expr cd $(pwd) && ./fcircle_core") | crontab -
     echo -e "${GREEN}成功添加定时任务${NC}"
 else
     echo -e "${BLUE}定时任务已存在，跳过添加${NC}"
@@ -74,16 +74,16 @@ fi
 # 立即运行core
 echo -e "${YELLOW}首次运行core...${NC}"
 mkdir -p logs
-./core
+./fcircle_core
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}core运行成功${NC}"
+    echo -e "${GREEN}fcircle_core运行成功${NC}"
 else
-    echo -e "${RED}core运行失败，请检查日志${NC}"
+    echo -e "${RED}fcircle_core运行失败，请检查日志${NC}"
 fi
 
 # 5. 运行api并后台运行，不重定向输出
 echo -e "${YELLOW}启动API服务...${NC}"
-nohup ./api &
+nohup ./fcircle_api &
 api_pid=$!
 
 # 等待一下确认API是否成功启动
