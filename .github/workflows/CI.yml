@@ -100,7 +100,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
             command: cross
           - name: linux-aarch64-unknown-linux-musl
-            runner: ubuntu-latest
+            runner: macos-latest
             target: aarch64-unknown-linux-musl
             command: cross
           - name: win-x86_64-pc-windows-gnu
