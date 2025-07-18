@@ -143,6 +143,8 @@ pub mod config {
         pub deploy_type: String,
         #[serde(rename = "SIMPLE_MODE")]
         pub simple_mode: bool,
+        #[serde(rename = "CRON")]
+        pub cron: String,
     }
 }
 
