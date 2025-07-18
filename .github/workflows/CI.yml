@@ -2,6 +2,8 @@ name: update-friends-posts
 on:
   push:
     branches: ["rs_dev", "main"]
+    tags:
+      - "v*.*.*"
   schedule:
     - cron: "0 0,6,12,18,21 * * *"
   workflow_dispatch:
