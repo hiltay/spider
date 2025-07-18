@@ -95,10 +95,6 @@ jobs:
             runner: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             command: cross
-          - name: linux-aarch64-unknown-linux-musl
-            runner: macos-latest
-            target: aarch64-unknown-linux-musl
-            command: cross
           - name: win-x86_64-pc-windows-gnu
             runner: windows-latest
             target: x86_64-pc-windows-gnu
