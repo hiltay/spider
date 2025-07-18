@@ -86,7 +86,7 @@ jobs:
           - name: linux-x86_64-unknown-linux-musl
             runner: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            command: cargo
+            command: cross
           - name: linux-x86_64-unknown-linux-gnu
             runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -159,7 +159,7 @@ jobs:
           files: dist/${{ matrix.name }}.zip
 
   build-and-run-core:
-    if: ${{ github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' && (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
+    if: ${{ github.ref_type != 'tag' &&github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' && (github.ref == 'refs/heads/main' && always()) || (github.ref != 'refs/heads/main') && success()}}
     needs: [check, test-versions]
     name: build and run core
     runs-on: ubuntu-latest
