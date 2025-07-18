@@ -77,7 +77,7 @@ jobs:
         run: cargo test --workspace --all-features --all-targets -- --test-threads=1
 
   build-and-release:
-    # if: ${{ github.ref_type == 'tag' }}
+    if: ${{ github.ref_type == 'tag' }}
     needs: [check, test-versions]
     runs-on: ${{ matrix.runner }} # 定义作业运行的操作系统
     strategy:
@@ -104,7 +104,7 @@ jobs:
             target: aarch64-unknown-linux-musl
             command: cross
           - name: win-x86_64-pc-windows-gnu
-            runner: ubuntu-latest
+            runner: windows-latest
             target: x86_64-pc-windows-gnu
             command: cross
           - name: win-x86_64-pc-windows-msvc
